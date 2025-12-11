@@ -12,14 +12,7 @@ Este README reúne em um único lugar os fluxos de tratamentos de recursos de re
 ## Índice
 
 - [Visão Geral e Convenções](#visão-geral-e-convenções)
-- [NAT](#nat)
-- [Load Balancer](#load-balancer)
-- [VPN](#vpn)
-- [Public Address](#public-address)
-- [Diagramas (Mermaid)](#diagramas-mermaid)
-- [Templates e Exemplos](#templates-e-exemplos)
-- [Checklist Geral de Deploy](#checklist-geral-de-deploy)
-
+- [TAG](#tag)
 ---
 
 ## Visão Geral e Convenções
