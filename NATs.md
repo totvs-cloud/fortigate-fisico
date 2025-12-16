@@ -62,22 +62,31 @@ flowchart TB
 
 ```mermaid
 flowchart TD
-  Start([Start]) --> GetTx[`GetTransactionID()`]
-  GetTx --> ForService{Para cada `service` em `PaloaltoServicesCreate`}
-  ForService --> CheckSingleton[`config.EnvSingletons.Paloalto[identifier]`]
-  CheckSingleton -- não existe --> ReturnErr[Retornar `core.StatusConsumer{Status: core.ERROR}`]
-  CheckSingleton --> BuildPorts[`construir lista de ports`]
-  BuildPorts --> PreparePayload[`paloalto.PaloaltoFields` (montar payload)]
-  PreparePayload --> LogExists[`config.EnvSingletons.Logger.Debugf(...)`]
-  LogExists --> ExistsCall[`client.Exists(payload)`]
-  ExistsCall -- erro --> ReturnErr
-  ExistsCall -- não existe --> LogCreate[`config.EnvSingletons.Logger.Debugf(... "Create")`]
-  LogCreate --> CreateCall[`client.Create(payload)`]
-  CreateCall -- erro --> ReturnErr
-  CreateCall --> ContinueLoop[Continuar próximo service]
-  ExistsCall -- existe --> ContinueLoop
-  ContinueLoop --> ForService
-  ForService --> ReturnOk[Retornar `core.StatusConsumer{Status: core.COMPLETED}`]
-  ReturnErr --> End([End])
+  Start([Start]) --> GetTx[GetTransactionID]
+  GetTx --> ForService{Para cada service}
+  ForService --> CheckSingleton[Checar Firewall]
+  CheckSingleton -- não --> Err[Retornar core.ERROR]
+  CheckSingleton --> Prepare[Montar payload]
+  Prepare --> ExistsCall[client.Exists.payload]
+  ExistsCall -- não --> CreateCall[client.Create.payload]
+  CreateCall -- erro --> Err
+  CreateCall --> Continue[Próximo service]
+  ExistsCall -- existe --> Continue
+  Continue --> ForService
+  ForService --> EndServices[Portas Processadas]
+  EndServices --> ReturnOk[Retornar COMPLETED]
+  Err --> End([End])
   ReturnOk --> End
+```
+
+## Payload no Micro Serviço
+
+```json
+{
+  "Name":"TCP-63000",
+  "Path":"service",
+  "Port": { 
+    "Port":"63000"
+    }
+  }
 ```
