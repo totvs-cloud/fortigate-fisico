@@ -56,4 +56,28 @@ flowchart TB
   v1_8_paloalto_host_create_error_delete["v1.8.paloalto.host.create.error.delete"] -->|error| v1_nat_create["v1.nat.create"]
 ```
 
-## Micro Serviço paloalto-host - create
+## Micro Serviço paloalto-service - create
+
+### Fluxo
+
+```mermaid
+flowchart TD
+  Start([Start]) --> GetTx[`GetTransactionID()`]
+  GetTx --> ForService{Para cada `service` em `PaloaltoServicesCreate`}
+  ForService --> CheckSingleton[`config.EnvSingletons.Paloalto[identifier]`]
+  CheckSingleton -- não existe --> ReturnErr[Retornar `core.StatusConsumer{Status: core.ERROR}`]
+  CheckSingleton --> BuildPorts[`construir lista de ports`]
+  BuildPorts --> PreparePayload[`paloalto.PaloaltoFields` (montar payload)]
+  PreparePayload --> LogExists[`config.EnvSingletons.Logger.Debugf(...)`]
+  LogExists --> ExistsCall[`client.Exists(payload)`]
+  ExistsCall -- erro --> ReturnErr
+  ExistsCall -- não existe --> LogCreate[`config.EnvSingletons.Logger.Debugf(... "Create")`]
+  LogCreate --> CreateCall[`client.Create(payload)`]
+  CreateCall -- erro --> ReturnErr
+  CreateCall --> ContinueLoop[Continuar próximo service]
+  ExistsCall -- existe --> ContinueLoop
+  ContinueLoop --> ForService
+  ForService --> ReturnOk[Retornar `core.StatusConsumer{Status: core.COMPLETED}`]
+  ReturnErr --> End([End])
+  ReturnOk --> End
+```
