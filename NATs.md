@@ -166,3 +166,35 @@ flowchart TD
 }
 ```
 
+## Micro Serviço paloalto-rule (v1.3.paloalto.rule.create)
+
+### Fluxo - Rule Create
+
+
+```mermaid
+graph TD
+  A([Inicio]) --> C[Processa regras];
+  C --> D{Config existe?};
+  D -- Nao --> E[ERROR];
+
+  D -- Sim --> F[Consulta regra];
+  F --> G{Existe?};
+
+  G -- Nao --> H[Cria regra];
+  H --> I{Sucesso?};
+  I -- Sim --> J[Mover];
+  I -- Nao --> E;
+  J --> T;
+
+  G -- Sim --> L{Schedule?};
+  L -- Sim --> M[Cria schedule];
+  M --> N{Sucesso?};
+  N -- Sim --> O[Mover];
+  N -- Nao --> E;
+  O --> T[COMPLETD];
+
+
+
+  T --> C;
+
+```
