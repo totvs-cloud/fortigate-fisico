@@ -56,407 +56,84 @@ flowchart TB
   v1_8_paloalto_host_create_error_delete["v1.8.paloalto.host.create.error.delete"] -->|error| v1_nat_create["v1.nat.create"]
 ```
 
-## Micro Serviço paloalto-service (v1.1.paloalto.service.create)
+## Serviços envolvidos
 
-### Fluxo - Service Create
+- [v1.1.paloalto.service.create](paloalto-service.md#fluxo---service-create)
+- [v1.2.paloalto.host.create](paloalto-host.md#fluxo---host-create)
+- [v1.3.paloalto.rule.create](paloalto-rule.md#fluxo---rule-create)
+- [v1.4.paloalto.rule.edit](#)
 
-```mermaid
-flowchart TD
-  Start([Start]) --> GetTx[GetTransactionID]
-  GetTx --> ForService{Para cada service}
-  ForService --> CheckSingleton[Checar Firewall]
-  CheckSingleton -- não --> Err[Retornar core.ERROR]
-  CheckSingleton --> Prepare[Montar payload]
-  Prepare --> ExistsCall[client.Exists.payload]
-  ExistsCall -- não --> CreateCall[client.Create.payload]
-  CreateCall -- erro --> Err
-  CreateCall --> Continue[Próximo service]
-  ExistsCall -- existe --> Continue
-  Continue --> ForService
-  ForService --> EndServices[Portas Processadas]
-  EndServices --> ReturnOk[Retornar COMPLETED]
-  Err --> End([End])
-  ReturnOk --> End
-```
+---
 
-## Payload no Micro Serviço
-
-```json
-{
-  "Name":"TCP-63000",
-  "Path":"service",
-  "Port": { 
-    "Port":"63000"
-  }
-}
-```
-
-### End-Point API PaloAlto
-
-> /restapi/v10.2/Objects/Services
-
-### Payload API PaloAlto
-
-```json
-{
-  "entry": {
-    "@name": "TCP-63000",
-    "description": "TCP-63000",
-    "protocol": {
-      "tcp": {
-        "port": "63000",
-      }
-    }
-  }
-}
-```
-
-## Micro Serviço paloalto-host (v1.2.paloalto.host.create)
-
-### Fluxo - Host Create
-
-```mermaid
-flowchart TD
-  A([Start]) --> B[for each host]
-  B --> C{Singleton?}
-  C -- No --> E[ERROR]
-  C -- Yes --> D[build Client]
-  D --> F[new client]
-  F --> G{client ok?}
-  G -- No --> E
-  G -- Yes --> H["get host"]
-  H --> I{"code ok? (0 or 5)"}
-  I -- No --> E
-  I -- Yes --> J[build payload]
-  J --> K{host exists?}
-  K -- Yes --> O[mark rollback data]
-  K -- No --> M["create host (retry)"]
-  M --> N{create ok?}
-  N -- No --> E
-  N -- Yes --> O
-  O --> P[update=true]
-  P --> R{more hosts?}
-  R -- Yes --> B
-  R -- No --> S([return COMPLETED])
-``` 
-
-## Payload no Micro Serviço - paloalto-host
-  
-```json
-{
-  "Name": "TFDNBM_CV5RGT_ate_HST-189.126.152.92",
-  "Vsys": "vsys1",
-  "Address": "189.126.152.92/32",
-  "Identifier": "fisico"
-}
-```
-
-### End-Point API PaloAlto - Address Object
-
-> /restapi/v10.2/Objects/Addresses
-
-### Payload API PaloAlto - Address Object
-
-```json
-{
-  "entry": {
-    "@name": "TFDNBM_CV5RGT_ate_HST-189.126.152.92",
-    "ip-netmask": "189.126.152.92/32"
-  }
-}
-```
-
-## Micro Serviço paloalto-rule (v1.3.paloalto.rule.create)
-
-### Fluxo - Rule Create
-
+### Fluxo - Edição de NAT
 
 ```mermaid
 graph TD
-  A([Inicio]) --> C[Processa regras];
-  C --> D{Config existe?};
-  D -- Nao --> E[ERROR];
-
-  D -- Sim --> F[Consulta regra];
-  F --> G{Existe?};
-
-  G -- Nao --> H[Cria regra];
-  H --> I{Sucesso?};
-  I -- Sim --> J[Mover];
-  I -- Nao --> E;
-  J --> T;
-
-  G -- Sim --> L{Schedule?};
-  L -- Sim --> M[Cria schedule];
-  M --> N{Sucesso?};
-  N -- Sim --> O[Mover];
-  N -- Nao --> E;
-  O --> T[COMPLETD];
-
-  T --> C;
-
+  v1_0_restrictions_find["v1.0.restrictions.find"] -->|next| v1_1_paloalto_service_create["v1.1.paloalto.service.create"]
+  v1_0_restrictions_find["v1.0.restrictions.find"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_1_paloalto_service_create["v1.1.paloalto.service.create"] -->|next| v1_2_paloalto_host_delete["v1.2.paloalto.host.delete"]
+  v1_1_paloalto_service_create["v1.1.paloalto.service.create"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_2_paloalto_host_delete["v1.2.paloalto.host.delete"] -->|next| v1_3_paloalto_host_create["v1.3.paloalto.host.create"]
+  v1_2_paloalto_host_delete["v1.2.paloalto.host.delete"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_3_paloalto_host_create["v1.3.paloalto.host.create"] -->|next| v1_4_paloalto_rule_delete["v1.4.paloalto.rule.delete"]
+  v1_3_paloalto_host_create["v1.3.paloalto.host.create"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_4_paloalto_rule_delete["v1.4.paloalto.rule.delete"] -->|next| v1_5_paloalto_rule_create["v1.5.paloalto.rule.create"]
+  v1_4_paloalto_rule_delete["v1.4.paloalto.rule.delete"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_5_paloalto_rule_create["v1.5.paloalto.rule.create"] -->|next| v1_6_paloalto_rule_edit["v1.6.paloalto.rule.edit"]
+  v1_5_paloalto_rule_create["v1.5.paloalto.rule.create"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_6_paloalto_rule_edit["v1.6.paloalto.rule.edit"] -->|next| v1_7_paloalto_nat_delete["v1.7.paloalto.nat.delete"]
+  v1_6_paloalto_rule_edit["v1.6.paloalto.rule.edit"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_7_paloalto_nat_delete["v1.7.paloalto.nat.delete"] -->|next| v1_8_paloalto_nat_create["v1.8.paloalto.nat.create"]
+  v1_7_paloalto_nat_delete["v1.7.paloalto.nat.delete"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_8_paloalto_nat_create["v1.8.paloalto.nat.create"] -->|next| v1_9_paloalto_nat_edit["v1.9.paloalto.nat.edit"]
+  v1_8_paloalto_nat_create["v1.8.paloalto.nat.create"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_9_paloalto_nat_edit["v1.9.paloalto.nat.edit"] -->|next| v1_10_fortinet_address_create["v1.10.fortinet.address.create"]
+  v1_9_paloalto_nat_edit["v1.9.paloalto.nat.edit"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_10_fortinet_address_create["v1.10.fortinet.address.create"] -->|next| v1_11_fortinet_vip_delete["v1.11.fortinet.vip.delete"]
+  v1_10_fortinet_address_create["v1.10.fortinet.address.create"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_11_fortinet_vip_delete["v1.11.fortinet.vip.delete"] -->|next| v1_12_fortinet_vip_create["v1.12.fortinet.vip.create"]
+  v1_11_fortinet_vip_delete["v1.11.fortinet.vip.delete"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_12_fortinet_vip_create["v1.12.fortinet.vip.create"] -->|next| v1_13_fortinet_snat_edit["v1.13.fortinet.snat.edit"]
+  v1_12_fortinet_vip_create["v1.12.fortinet.vip.create"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_13_fortinet_snat_edit["v1.13.fortinet.snat.edit"] -->|next| v1_14_fortinet_policy_delete["v1.14.fortinet.policy.delete"]
+  v1_13_fortinet_snat_edit["v1.13.fortinet.snat.edit"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_14_fortinet_policy_delete["v1.14.fortinet.policy.delete"] -->|next| v1_15_fortinet_service_delete["v1.15.fortinet.service.delete"]
+  v1_14_fortinet_policy_delete["v1.14.fortinet.policy.delete"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_15_fortinet_service_delete["v1.15.fortinet.service.delete"] -->|next| v1_16_fortinet_service_create["v1.16.fortinet.service.create"]
+  v1_15_fortinet_service_delete["v1.15.fortinet.service.delete"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_16_fortinet_service_create["v1.16.fortinet.service.create"] -->|next| v1_17_fortinet_policy_create["v1.17.fortinet.policy.create"]
+  v1_16_fortinet_service_create["v1.16.fortinet.service.create"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_17_fortinet_policy_create["v1.17.fortinet.policy.create"] -->|next| v1_18_fortinet_address_delete["v1.18.fortinet.address.delete"]
+  v1_17_fortinet_policy_create["v1.17.fortinet.policy.create"] -->|error| v1_nat_edit["v1.nat.edit"]
+  v1_18_fortinet_address_delete["v1.18.fortinet.address.delete"] -->|next| v1_nat_edit["v1.nat.edit"]
+  v1_18_fortinet_address_delete["v1.18.fortinet.address.delete"] -->|error| v1_nat_edit["v1.nat.edit"]
 ```
 
-## Payload no Micro Serviço - paloalto-rule
-  
-```json
-{
-	"Name": "TDEVOPS_CDEVOPS_ate-200",
-	"To": "External_Clients-Interno",
-	"From": "External_Clients-Externo",
-	"Source": {
-		"Address": "BR"
-	},
-	"Destination": {
-		"Address": "SHARED_HST-181.41.174.74"
-	},
-	"SourceUser": "any",
-	"Category": "any",
-	"Application": "any",
-	"Tag": "TDEVOPS_CDEVOPS_ate",
-	"Action": "allow",
-	"Move": "Drop-Regions-vsys2",
-	"MoveDirection": "before",
-	"Identifier": "fisico",
-	"AllPortsRule": [
-		{
-			"Name": "TCP-2203"
-		},
-		{
-			"Name": "TCP-2204"
-		},
-		{
-			"Name": "TCP-2202"
-		}
-	],
-	"SetProfiles": true,
-	"VirusProfile": "default",
-	"LogSetting": "FWD_ELK_syslog_vsys2"
-}
-```
+### Fluxo - Remoção de NAT
 
-### End-Point API PaloAlto - Security Rule
-
-> /restapi/v10.2/SecurityRules
-
-### Payload API PaloAlto - Security Rule
-
-```json
-{
-  "@name": "TFEOT4_CKOYPH_ate-1",
-  "@location": "vsys",
-  "from": {
-    "member": [
-      "External_Clients-Externo"
-    ]
-  },
-  "to": {
-    "member": [
-      "External_Clients-Interno"
-    ]
-  },
-  "source": {
-    "member": [
-      "any"
-    ]
-  },
-  "destination": {
-    "member": [
-      "SHARED_HST-181.41.163.26"
-    ]
-  },
-  "source-user": {
-    "member": [
-      "any"
-    ]
-  },
-  "category": {
-    "member": [
-      "any"
-    ]
-  },
-  "application": {
-    "member": [
-      "any"
-    ]
-  },
-  "service": {
-    "member": [
-      "TCP-10801",
-      "TCP-10802",
-      "TCP-10803",
-      "TCP-10866",
-      "TCP-10867",
-      "TCP-10868",
-      "TCP-10869"
-    ]
-  },
-  "action": "allow",
-  "tag": {
-    "member": [
-      "TFEOT4_CKOYPH_ate"
-    ]
-  },
-  "log-setting": "FWD_ELK_syslog_vsys2",
-  "profile-setting": {
-    "profiles": {
-      "virus": {
-        "member": [
-          "default"
-        ]
-      },
-      "vulnerability": {
-        "member": [
-          "ips_base"
-        ]
-      }
-    }
-  }
-}
-```
-
-## Exemplo com Membro na Origem
-
-```json
-{
-  "@name": "TEZDNB_CGNRO8_ate-9",
-  "from": {
-    "member": [
-      "External_Clients-Externo"
-    ]
-  },
-  "to": {
-    "member": [
-      "External_Clients-Interno"
-    ]
-  },
-  "source": {
-    "member": [
-      "HST-200.49.58.57",
-      "HST-200.49.32.58",
-      "HST-200.49.58.169",
-      "HST-200.49.59.89",
-      "HST-189.8.9.122",
-      "HST-189.126.141.144"
-    ]
-  },
-  "destination": {
-    "member": [
-      "TEZDNB_CGNRO8_ate_HST-181.41.162.45"
-    ]
-  },
-  "source-user": {
-    "member": [
-      "any"
-    ]
-  },
-  "category": {
-    "member": [
-      "any"
-    ]
-  },
-  "application": {
-    "member": [
-      "any"
-    ]
-  },
-  "service": {
-    "member": [
-      "TCP-37000"
-    ]
-  },
-  "action": "allow",
-  "tag": {
-    "member": [
-      "TEZDNB_CGNRO8_ate"
-    ]
-  }
-}
-```
-
-## Exemplo com País na Origem
-
-```json
-{
-  "@name": "TFCVY2_C6HOGA_ate-6",
-  "@location": "vsys",
-  "from": {
-    "member": [
-      "External_Clients-Externo"
-    ]
-  },
-  "to": {
-    "member": [
-      "External_Clients-Interno"
-    ]
-  },
-  "source": {
-    "member": [
-      "BR",
-      "US",
-      "SE",
-      "TW",
-      "PT"
-    ]
-  },
-  "destination": {
-    "member": [
-      "TFCVY2_C6HOGA_ate_HST-181.41.161.192"
-    ]
-  },
-  "source-user": {
-    "member": [
-      "any"
-    ]
-  },
-  "category": {
-    "member": [
-      "any"
-    ]
-  },
-  "application": {
-    "member": [
-      "any"
-    ]
-  },
-  "service": {
-    "member": [
-      "TCP-2323",
-      "TCP-4060",
-      "TCP-4000",
-      "TCP-4070",
-      "TCP-6800",
-      "TCP-8800",
-      "TCP-6900",
-      "TCP-7600",
-      "TCP-8402",
-      "TCP-443",
-      "TCP-8403",
-      "TCP-4010",
-      "TCP-4020",
-      "TCP-4030",
-      "TCP-4040",
-      "TCP-4050",
-      "TCP-4080",
-      "TCP-6700",
-      "TCP-6000",
-      "TCP-7800"
-    ]
-  },
-  "action": "allow",
-  "tag": {
-    "member": [
-      "TFCVY2_C6HOGA_ate"
-    ]
-  },
-  "profile-setting": {
-    "profiles": {
-      "virus": {
-        "member": [
-          "default"
-        ]
-      }
-    }
-  }
-}
-```
+```mermaid
+graph TD
+  v1_1_paloalto_rule_delete["v1.1.paloalto.rule.delete"] -->|next| v1_2_paloalto_rule_edit["v1.2.paloalto.rule.edit"]
+  v1_1_paloalto_rule_delete["v1.1.paloalto.rule.delete"] -->|error| v1_nat_delete["v1.nat.delete"]
+  v1_2_paloalto_rule_edit["v1.2.paloalto.rule.edit"] -->|next| v1_3_paloalto_nat_delete["v1.3.paloalto.nat.delete"]
+  v1_2_paloalto_rule_edit["v1.2.paloalto.rule.edit"] -->|error| v1_nat_delete["v1.nat.delete"]
+  v1_3_paloalto_nat_delete["v1.3.paloalto.nat.delete"] -->|next| v1_4_paloalto_nat_edit["v1.4.paloalto.nat.edit"]
+  v1_3_paloalto_nat_delete["v1.3.paloalto.nat.delete"] -->|error| v1_nat_delete["v1.nat.delete"]
+  v1_4_paloalto_nat_edit["v1.4.paloalto.nat.edit"] -->|next| v1_5_paloalto_service_delete["v1.5.paloalto.service.delete"]
+  v1_4_paloalto_nat_edit["v1.4.paloalto.nat.edit"] -->|error| v1_nat_delete["v1.nat.delete"]
+  v1_5_paloalto_service_delete["v1.5.paloalto.service.delete"] -->|next| v1_6_paloalto_host_delete["v1.6.paloalto.host.delete"]
+  v1_5_paloalto_service_delete["v1.5.paloalto.service.delete"] -->|error| v1_nat_delete["v1.nat.delete"]
+  v1_6_paloalto_host_delete["v1.6.paloalto.host.delete"] -->|next| v1_7_fortinet_policy_delete["v1.8.fortinet.vip.delete"]
+  v1_6_paloalto_host_delete["v1.6.paloalto.host.delete"] -->|error| v1_nat_delete["v1.nat.delete"]
+  v1_7_fortinet_policy_delete["v1.7.fortinet.policy.delete"] -->|next| v1_8_fortinet_vip_delete["v1.8.fortinet.vip.delete"]
+  v1_7_fortinet_policy_delete["v1.7.fortinet.policy.delete"] -->|error| v1_nat_delete["v1.nat.delete"]
+  v1_8_fortinet_vip_delete["v1.8.fortinet.vip.delete"] -->|next| v1_9_fortinet_snat_edit["v1.9.fortinet.snat.edit"]
+  v1_8_fortinet_vip_delete["v1.8.fortinet.vip.delete"] -->|error| v1_nat_delete["v1.nat.delete"]
+  v1_9_fortinet_snat_edit["v1.9.fortinet.snat.edit"] -->|next| v1_10_fortinet_snat_delete["v1.10.fortinet.snat.delete"]
+  v1_9_fortinet_snat_edit["v1.9.fortinet.snat.edit"] -->|error| v1_nat_delete["v1.nat.delete"]
+  v1_10_fortinet_snat_delete["v1.10.fortinet.snat.delete"] -->|next| v1_11_fortinet_address_delete["v1.11.fortinet.address.delete"]
+  v1_10_fortinet_snat_delete["v1.10.fortinet.snat.delete"] -->|error| v1_nat_delete["v1.nat.delete"]
+  v1_11_fortinet_address_delete["v1.11.fortinet.address.delete"] -->|next| v1_12_fortinet_service_delete["v1.12.fortinet.service.delete"]
+  v1_11_fortinet_address_delete["v1.11.fortinet.address.delete"] -->|error| v1_nat_delete["v1.nat.delete"]
+  v1_12_fortinet_service_delete["v1.12.fortinet.service.delete"] -->|next| v1_nat_delete["v1.nat.delete"]
+  v1_12_fortinet_service_delete["v1.12.fortinet.service.delete"] -->|error| v1_nat_delete["v1.nat.delete"]
