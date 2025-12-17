@@ -193,8 +193,43 @@ graph TD
   N -- Nao --> E;
   O --> T[COMPLETD];
 
-
-
   T --> C;
 
 ```
+
+## Payload no Micro Serviço - paloalto-rule
+  
+```json
+{
+	"Name": "TDEVOPS_CDEVOPS_ate-200",
+	"To": "External_Clients-Interno",
+	"From": "External_Clients-Externo",
+	"Source": {
+		"Address": "BR"
+	},
+	"Destination": {
+		"Address": "SHARED_HST-181.41.174.74"
+	},
+	"SourceUser": "any",
+	"Category": "any",
+	"Application": "any",
+	"Tag": "TDEVOPS_CDEVOPS_ate",
+	"Action": "allow",
+	"Move": "Drop-Regions-vsys2",
+	"MoveDirection": "before",
+	"Identifier": "fisico",
+	"AllPortsRule": [
+		{
+			"Name": "TCP-2203"
+		},
+		{
+			"Name": "TCP-2204"
+		},
+		{
+			"Name": "TCP-2202"
+		}
+	],
+	"SetProfiles": true,
+	"VirusProfile": "default",
+	"LogSetting": "FWD_ELK_syslog_vsys2"
+}
