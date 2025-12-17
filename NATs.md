@@ -87,6 +87,26 @@ flowchart TD
   "Path":"service",
   "Port": { 
     "Port":"63000"
+  }
+}
+```
+
+### End-Point API PaloAlto
+
+> /restapi/v10.2/Objects/Services
+
+### Payload API PaloAlto
+
+```json
+{
+  "entry": {
+    "@name": "TCP-63000",
+    "description": "TCP-63000",
+    "protocol": {
+      "tcp": {
+        "port": "63000",
+      }
     }
   }
+}
 ```
