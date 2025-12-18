@@ -6,12 +6,12 @@
 
 
 ```mermaid
-graph TD
+flowchart TD
   A([Inicio]) --> C[Processa regras];
   C --> D{Config existe?};
   D -- Nao --> E[ERROR];
-
   D -- Sim --> F[Consulta regra];
+
   F --> G{Existe?};
 
   G -- Nao --> H[Cria regra];
