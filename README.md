@@ -14,8 +14,8 @@ Este README reúne em um único lugar os fluxos de tratamentos de recursos de re
 - [Visão Geral e Convenções](#visão-geral-e-convenções)
 - [TAGs](TAGs.md#tag)
 - [Public Addresses](PublicAddresses.md#public-addresses)
-- [NATs](NATs.md#nats)
-- [Load Balancers](LoadBalancers.md#load-balancers)
+- [NATs](nats.md)
+- [Load Balancers](load-balancers.md)
 - [VPNs](VPNs.md#vpns)
 ---
 
