@@ -111,15 +111,38 @@ flowchart TD
   A([Start]) --> B[GetTransactionID]
   B --> C[For each in ike]
   C --> D[CheckFirewallType]
-  D -- não --> E[Error]
-  D -- sim --> F[ExistsIKE]
+  D --> M{Success?}
+  M -- sim --> F[ExistsIKE]
+  M -- não --> E[Error]
   F -- não --> K
   F -- sim --> G[DeleteIKE]
   G --> I{Success?}
   I -- sim --> J{MoreIke?}
-  I -- não --> E
+  I -- não --> E  
   J -- sim --> C
   J -- não --> K[COMPLETED]
   E --> L([END])
   K --> L
+```
+
+## Payload no Micro Serviço - ike-gateway delete
+
+```json
+{
+  "Name": "TEZDNB_CGNRO8_ate-8"
+}
+```
+
+### End-Point API PaloAlto - IKE Gateway Delete
+
+> /restapi/v10.2/Network/IKEGateways
+
+### Payload API PaloAlto - IKE Gateway Delete
+
+```json
+{
+  "entry": {
+    "@name": "TEZDNB_CGNRO8_ate-8"
+  }
+}
 ```
