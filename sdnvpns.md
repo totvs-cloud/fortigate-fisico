@@ -41,6 +41,12 @@ graph TD
   v1_9_fortinet_policy_create_error_delete["v1.9.fortinet.policy.create.error.delete"] -->|error| v1_vpn_create["v1.vpn.create"]
 ```
 
+### Serviços envolvidos
+
+- [v1.4.paloalto.host.create](paloalto-host.md#fluxo---host-create)
+- [v1.5.paloalto.rule.create](paloalto-rule.md#fluxo---rule-create)
+- [v1.6.paloalto.rule.edit](#)
+
 ## Fluxo - SDN-VPN Delete
 
 ```mermaid
