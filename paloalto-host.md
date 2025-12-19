@@ -1,6 +1,6 @@
 # PALOALTO HOST
 
-## Micro Serviço paloalto-host (v1.2.paloalto.host.create)
+## Micro Serviço paloalto-host
 
 ### Fluxo - Host Create
 

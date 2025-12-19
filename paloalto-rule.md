@@ -1,6 +1,6 @@
 # PALOALTO RULE
 
-## Micro Serviço paloalto-rule (v1.3.paloalto.rule.create)
+## Micro Serviço paloalto-rule
 
 ### Fluxo - Rule Create
 
