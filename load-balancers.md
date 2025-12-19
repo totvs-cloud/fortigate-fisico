@@ -66,6 +66,13 @@ graph TD
   v1_10_paloalto_host_create_error_delete["v1.10.paloalto.host.create.error.delete"] -->|error| v1_load_balance_create["v1.load.balance.create"]
 ```
 
+## Serviços envolvidos
+
+- [v1.1.paloalto.service.create](paloalto-service.md#fluxo---service-create)
+- [v1.2.paloalto.host.create](paloalto-host.md#fluxo---host-create)
+- [v1.3.paloalto.rule.create](paloalto-rule.md#fluxo---rule-create)
+- [v1.4.paloalto.rule.edit](#)
+
 ## Fluxo - Load Balancer Edit
 
 ```mermaid

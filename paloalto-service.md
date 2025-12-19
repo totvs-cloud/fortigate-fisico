@@ -6,21 +6,22 @@
 
 ```mermaid
 flowchart TD
-  Start([Start]) --> GetTx[GetTransactionID]
-  GetTx --> ForService{Para cada service}
-  ForService --> CheckSingleton[Checar Firewall]
-  CheckSingleton -- não --> Err[Retornar core.ERROR]
-  CheckSingleton --> Prepare[Montar payload]
-  Prepare --> ExistsCall[client.Exists.payload]
-  ExistsCall -- não --> CreateCall[client.Create.payload]
-  CreateCall -- erro --> Err
-  CreateCall --> Continue[Próximo service]
-  ExistsCall -- existe --> Continue
-  Continue --> ForService
-  ForService --> EndServices[Portas Processadas]
-  EndServices --> ReturnOk[Retornar COMPLETED]
-  Err --> End([End])
-  ReturnOk --> End
+  A([Start]) --> B[GetTransactionID]
+  B --> C{Para cada service}
+  C --> D[Checar Firewall]
+  D -- não --> E[Retornar core.ERROR]
+  D --> F[Montar payload]
+  F --> G[client.Exists.payload]
+  G -- não --> H[client.Create.payload]
+  H -- erro --> E
+  H --> I[Próximo service]
+
+  G -- existe --> I
+  I --> C
+  C --> J[Portas Processadas]
+  J --> K[Retornar COMPLETED]
+  E --> L([End])
+  K --> L
 ```
 
 ## Payload no Micro Serviço
@@ -51,6 +52,52 @@ flowchart TD
         "port": "63000",
       }
     }
+  }
+}
+```
+
+### Fluxo - Service Delete
+
+```mermaid
+flowchart TD
+  A([Start]) --> B[GetTransactionID]
+  B --> C{Para cada service}
+  C --> D[Checar Firewall]
+  D -- não --> E[Retornar core.ERROR]
+  D --> F[Montar payload]
+  F --> G[client.Exists.payload]
+  G -- não --> I[Próximo service]
+  G -- existe --> H[Está em uso?]
+  H -- sim --> N[Continue]
+  N --> I[Próximo service]
+  H -- não --> J[client.Delete.payload]
+  J -- erro --> E
+  J --> I[Próximo service]
+  I --> C
+  C --> K[Portas Processadas]
+  K --> L[Retornar COMPLETED]
+  E --> M([End])
+  L --> M
+```
+
+## Payload no Micro Serviço
+
+```json
+{
+  "Name":"TCP-63000",
+}
+```
+
+### End-Point API PaloAlto
+
+> /restapi/v10.2/Objects/Services
+
+### Payload API PaloAlto
+
+```json
+{
+  "entry": {
+    "@name": "TCP-63000"
   }
 }
 ```
