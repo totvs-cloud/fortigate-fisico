@@ -294,3 +294,48 @@ flowchart TD
   }
 }
 ```
+
+### Fluxo - Rule Delete
+
+```mermaid
+flowchart TD
+  A([Start]) --> B[GetTransactionID]
+  B --> C{For each rule}
+  C --> D[Check Firewall]
+  D -- no --> E[Return core.ERROR]
+  D --> F[Build payload]
+  F --> G[RuleExists]
+  G -- yes --> H[DeleteRule]
+  G -- no --> I[Next rule]
+  H --> M{Success?}
+  M -- no --> E
+  M -- yes --> I[Next rule]
+
+  I --> C
+  C --> J[Rules Processed]
+  J --> K[Return COMPLETED]
+  E --> L([End])
+  K --> L
+```
+
+## Payload no Micro Serviço
+
+```json
+{
+  "Name":"TDEVOPS_CDEVOPS_ate-200",
+}
+```
+
+### End-Point API PaloAlto
+
+> /restapi/v10.2/SecurityRules
+
+### Payload API PaloAlto
+
+```json
+{
+  "entry": {
+    "@name": "TDEVOPS_CDEVOPS_ate-200"
+  }
+}
+```
