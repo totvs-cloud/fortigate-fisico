@@ -1,8 +1,8 @@
-## Load-Balancers
+# Load-Balancers
 
 **Objetivo** Configurar Load Balancers para distribuir o tráfego de rede entre múltiplos servidores, garantindo alta disponibilidade e desempenho otimizado dos serviços oferecidos.
 
-### Fluxo - Load Balancer Create
+## Fluxo - Load Balancer Create
 
 ```mermaid
 graph TD
@@ -64,4 +64,78 @@ graph TD
   v1_9_paloalto_rule_create_error_delete["v1.9.paloalto.rule.create.error.delete"] -->|error| v1_load_balance_create["v1.load.balance.create"]
   v1_10_paloalto_host_create_error_delete["v1.10.paloalto.host.create.error.delete"] -->|next| v1_load_balance_create["v1.load.balance.create"]
   v1_10_paloalto_host_create_error_delete["v1.10.paloalto.host.create.error.delete"] -->|error| v1_load_balance_create["v1.load.balance.create"]
+```
+
+## Fluxo - Load Balancer Edit
+
+```mermaid
+flowchart TD
+  v1_0_restrictions_find["v1.0.restrictions.find"] -->|next| v1_1_paloalto_service_create["v1.1.paloalto.service.create"]
+  v1_0_restrictions_find["v1.0.restrictions.find"] -->|error| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_1_paloalto_service_create["v1.1.paloalto.service.create"] -->|next| v1_2_paloalto_host_delete["v1.2.paloalto.host.delete"]
+  v1_1_paloalto_service_create["v1.1.paloalto.service.create"] -->|error| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_2_paloalto_host_delete["v1.2.paloalto.host.delete"] -->|next| v1_3_paloalto_host_create["v1.3.paloalto.host.create"]
+  v1_2_paloalto_host_delete["v1.2.paloalto.host.delete"] -->|error| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_3_paloalto_host_create["v1.3.paloalto.host.create"] -->|next| v1_4_paloalto_rule_delete["v1.4.paloalto.rule.delete"]
+  v1_3_paloalto_host_create["v1.3.paloalto.host.create"] -->|error| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_4_paloalto_rule_delete["v1.4.paloalto.rule.delete"] -->|next| v1_5_paloalto_rule_create["v1.5.paloalto.rule.create"]
+  v1_4_paloalto_rule_delete["v1.4.paloalto.rule.delete"] -->|error| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_5_paloalto_rule_create["v1.5.paloalto.rule.create"] -->|next| v1_6_paloalto_rule_edit["v1.6.paloalto.rule.edit"]
+  v1_5_paloalto_rule_create["v1.5.paloalto.rule.create"] -->|error| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_6_paloalto_rule_edit["v1.6.paloalto.rule.edit"] -->|next| v1_7_paloalto_nat_delete["v1.7.paloalto.nat.delete"]
+  v1_6_paloalto_rule_edit["v1.6.paloalto.rule.edit"] -->|error| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_7_paloalto_nat_delete["v1.7.paloalto.nat.delete"] -->|next| v1_8_paloalto_nat_create["v1.8.paloalto.nat.create"]
+  v1_7_paloalto_nat_delete["v1.7.paloalto.nat.delete"] -->|error| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_8_paloalto_nat_create["v1.8.paloalto.nat.create"] -->|next| v1_9_paloalto_nat_edit["v1.9.paloalto.nat.edit"]
+  v1_8_paloalto_nat_create["v1.8.paloalto.nat.create"] -->|error| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_9_paloalto_nat_edit["v1.9.paloalto.nat.edit"] -->|next| v1_10_fortinet_address_create["v1.10.fortinet.address.create"]
+  v1_9_paloalto_nat_edit["v1.9.paloalto.nat.edit"] -->|error| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_10_fortinet_address_create["v1.10.fortinet.address.create"] -->|next| v1_11_fortinet_vip_delete["v1.11.fortinet.vip.delete"]
+  v1_10_fortinet_address_create["v1.10.fortinet.address.create"] -->|error| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_11_fortinet_vip_delete["v1.11.fortinet.vip.delete"] -->|next| v1_12_fortinet_vip_create["v1.12.fortinet.vip.create"]
+  v1_11_fortinet_vip_delete["v1.11.fortinet.vip.delete"] -->|error| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_12_fortinet_vip_create["v1.12.fortinet.vip.create"] -->|next| v1_13_fortinet_snat_edit["v1.13.fortinet.snat.edit"]
+  v1_12_fortinet_vip_create["v1.12.fortinet.vip.create"] -->|error| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_13_fortinet_snat_edit["v1.13.fortinet.snat.edit"] -->|next| v1_14_fortinet_address_delete["v1.14.fortinet.address.delete"]
+  v1_13_fortinet_snat_edit["v1.13.fortinet.snat.edit"] -->|error| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_14_fortinet_address_delete["v1.14.fortinet.address.delete"] -->|next| v1_15_nsxt_pool_edit["v1.15.nsxt.pool.edit"]
+  v1_14_fortinet_address_delete["v1.14.fortinet.address.delete"] -->|error| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_15_nsxt_pool_edit["v1.15.nsxt.pool.edit"] -->|next| v1_16_nsxt_vs_edit["v1.16.nsxt.vs.edit"]
+  v1_15_nsxt_pool_edit["v1.15.nsxt.pool.edit"] -->|error| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_16_nsxt_vs_edit["v1.16.nsxt.vs.edit"] -->|next| v1_load_balance_edit["v1.load.balance.edit"]
+  v1_16_nsxt_vs_edit["v1.16.nsxt.vs.edit"] -->|error| v1_load_balance_delete["v1.load.balance.delete"]
+```
+
+## Fluxo - Load Balancer Delete
+
+```mermaid
+flowchart TD
+  v1_1_paloalto_rule_delete["v1.1.paloalto.rule.delete"] -->|next| v1_2_paloalto_rule_edit["v1.2.paloalto.rule.edit"]
+  v1_1_paloalto_rule_delete["v1.1.paloalto.rule.delete"] -->|error| v1_load_balance_delete["v1.load.balance.delete"]
+  v1_2_paloalto_rule_edit["v1.2.paloalto.rule.edit"] -->|next| v1_3_paloalto_nat_delete["v1.3.paloalto.nat.delete"]
+  v1_2_paloalto_rule_edit["v1.2.paloalto.rule.edit"] -->|error| v1_load_balance_delete["v1.load.balance.delete"]
+  v1_3_paloalto_nat_delete["v1.3.paloalto.nat.delete"] -->|next| v1_4_paloalto_nat_edit["v1.4.paloalto.nat.edit"]
+  v1_3_paloalto_nat_delete["v1.3.paloalto.nat.delete"] -->|error| v1_load_balance_delete["v1.load.balance.delete"]
+  v1_4_paloalto_nat_edit["v1.4.paloalto.nat.edit"] -->|next| v1_5_paloalto_service_delete["v1.5.paloalto.service.delete"]
+  v1_4_paloalto_nat_edit["v1.4.paloalto.nat.edit"] -->|error| v1_load_balance_delete["v1.load.balance.delete"]
+  v1_5_paloalto_service_delete["v1.5.paloalto.service.delete"] -->|next| v1_6_paloalto_host_delete["v1.6.paloalto.host.delete"]
+  v1_5_paloalto_service_delete["v1.5.paloalto.service.delete"] -->|error| v1_load_balance_delete["v1.load.balance.delete"]
+  v1_6_paloalto_host_delete["v1.6.paloalto.host.delete"] -->|next| v1_8_fortinet_vip_delete["v1.8.fortinet.vip.delete"]
+  v1_6_paloalto_host_delete["v1.6.paloalto.host.delete"] -->|error| v1_load_balance_delete["v1.load.balance.delete"]
+  v1_7_fortinet_policy_delete["v1.7.fortinet.policy.delete"] -->|next| v1_8_fortinet_vip_delete["v1.8.fortinet.vip.delete"]
+  v1_7_fortinet_policy_delete["v1.7.fortinet.policy.delete"] -->|error| v1_load_balance_delete["v1.load.balance.delete"]
+  v1_8_fortinet_vip_delete["v1.8.fortinet.vip.delete"] -->|next| v1_9_fortinet_snat_edit["v1.9.fortinet.snat.edit"]
+  v1_8_fortinet_vip_delete["v1.8.fortinet.vip.delete"] -->|error| v1_load_balance_delete["v1.load.balance.delete"]
+  v1_9_fortinet_snat_edit["v1.9.fortinet.snat.edit"] -->|next| v1_10_fortinet_snat_delete["v1.10.fortinet.snat.delete"]
+  v1_9_fortinet_snat_edit["v1.9.fortinet.snat.edit"] -->|error| v1_load_balance_delete["v1.load.balance.delete"]
+  v1_10_fortinet_snat_delete["v1.10.fortinet.snat.delete"] -->|next| v1_11_fortinet_address_delete["v1.11.fortinet.address.delete"]
+  v1_10_fortinet_snat_delete["v1.10.fortinet.snat.delete"] -->|error| v1_load_balance_delete["v1.load.balance.delete"]
+  v1_11_fortinet_address_delete["v1.11.fortinet.address.delete"] -->|next| v1_12_fortinet_service_delete["v1.12.fortinet.service.delete"]
+  v1_11_fortinet_address_delete["v1.11.fortinet.address.delete"] -->|error| v1_load_balance_delete["v1.load.balance.delete"]
+  v1_11_nsxt_vs_delete["v1.11.nsxt.vs.delete"] -->|next| v1_12_nsxt_pool_delete["v1.12.nsxt.pool.delete"]
+  v1_11_nsxt_vs_delete["v1.11.nsxt.vs.delete"] -->|error| v1_load_balance_delete["v1.load.balance.delete"]
+  v1_12_fortinet_service_delete["v1.12.fortinet.service.delete"] -->|next| v1_11_nsxt_vs_delete["v1.11.nsxt.vs.delete"]
+  v1_12_fortinet_service_delete["v1.12.fortinet.service.delete"] -->|error| v1_load_balance_delete["v1.load.balance.delete"]
+  v1_12_nsxt_pool_delete["v1.12.nsxt.pool.delete"] -->|next| v1_load_balance_delete["v1.load.balance.delete"]
+  v1_12_nsxt_pool_delete["v1.12.nsxt.pool.delete"] -->|error| v1_load_balance_delete["v1.load.balance.delete"]
 ```
