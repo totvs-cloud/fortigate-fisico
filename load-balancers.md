@@ -71,7 +71,7 @@ graph TD
 - [v1.1.paloalto.service.create](paloalto-service.md#fluxo---service-create)
 - [v1.2.paloalto.host.create](paloalto-host.md#fluxo---host-create)
 - [v1.3.paloalto.rule.create](paloalto-rule.md#fluxo---rule-create)
-- [v1.4.paloalto.rule.edit](#)
+- [v1.4.paloalto.rule.edit](paloalto-rule.md#fluxo---rule-edit)
 
 ## Fluxo - Load Balancer Edit
 

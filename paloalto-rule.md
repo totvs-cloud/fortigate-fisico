@@ -339,3 +339,86 @@ flowchart TD
   }
 }
 ```
+
+
+### Fluxo - Rule Edit
+
+```mermaid
+flowchart TD
+    A([Início]) --> B(Loop)
+    
+    %% Validação de Dados de Entrada
+    B --> C{Dados válidos?<br/>}
+    C -- Não --> L{Mais itens<br/>na lista?}
+    C -- Sim --> D{EnvSingletons?}
+    
+    %% Validação de Configuração
+    D -- Não --> N([Fim: Erro])
+    D -- Sim --> E[Inicializar<br/>PaloAlto Client]
+    
+    %% Criação do Client
+    E --> F{Client criado}
+    F -- Não --> N
+    F -- Sim --> G[API GET: Buscar Grupo<br/>]
+    
+    %% GET e Verificação
+    G --> H{Erro no GET?<br/>}
+    H -- Sim --> N
+    H -- Não --> I{Grupo encontrado?<br/>}
+    
+    %% Lógica de Negócio (Se não encontrar, ignora e vai pro próximo)
+    I -- Não --> L
+    I -- Sim --> J[Adicionar/Remover Membros<br/>e Criar Payload]
+    
+    %% Update
+    J --> K[tualizar Grupo<br/>]
+    
+    %% Validação do Update
+    K --> O{Erro no UPDATE?<br/>}
+    O -- Sim --> N
+    O -- Não --> L
+    
+    %% Controle do Loop
+    L -- Sim --> B
+    L -- Não --> M([Fim: Sucesso])
+```
+
+## Payload no Micro Serviço - paloalto-rule
+
+```json
+{
+  "Name": "TFCVY2_C6HOGA_ate_HST-181.41.161.192",
+  "AddMembers": [
+    "BR",
+    "US",
+    "SE",
+    "TW",
+    "PT"
+  ],
+  "RemoveMembers": [],
+  "Vsys": "vsys1",
+  "Identifier": "fisico"
+}
+```
+
+### End-Point API PaloAlto - Address Group
+> /restapi/v10.2/AddressGroups
+
+### Payload API PaloAlto - Address Group
+
+```json
+{
+  "entry": {
+    "@name": "TFCVY2_C6HOGA_ate_HST-181.41.161.192",
+    "static": {
+      "member": [
+        "BR",
+        "US",
+        "SE",
+        "TW",
+        "PT"
+      ]
+    }
+  }
+}
+```

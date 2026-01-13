@@ -61,7 +61,7 @@ flowchart TB
 - [v1.1.paloalto.service.create](paloalto-service.md#fluxo---service-create)
 - [v1.2.paloalto.host.create](paloalto-host.md#fluxo---host-create)
 - [v1.3.paloalto.rule.create](paloalto-rule.md#fluxo---rule-create)
-- [v1.4.paloalto.rule.edit](#)
+- [v1.4.paloalto.rule.edit](paloalto-rule.md#fluxo---rule-edit)
 
 ---
 
@@ -109,6 +109,18 @@ graph TD
   v1_18_fortinet_address_delete["v1.18.fortinet.address.delete"] -->|error| v1_nat_edit["v1.nat.edit"]
 ```
 
+## Serviços envolvidos
+
+- [v1.1.paloalto.service.create](paloalto-service.md#fluxo---service-create)
+- [v1.2.paloalto.host.delete](paloalto-host.md#fluxo---host-delete)
+- [v1.3.paloalto.host.create](paloalto-host.md#fluxo---host-create)
+- [v1.4.paloalto.rule.delete](paloalto-rule.md#fluxo---rule-delete)
+- [v1.5.paloalto.rule.create](paloalto-rule.md#fluxo---rule-create)
+- [v1.6.paloalto.rule.edit](paloalto-rule.md#fluxo---rule-edit)
+- [v1.7.paloalto.nat.delete](paloalto-nat.md#fluxo---nat-delete)
+- [v1.8.paloalto.nat.create](paloalto-nat.md#fluxo---nat-create)
+- [v1.9.paloalto.nat.edit](paloalto-nat.md#fluxo---nat-edit)
+
 ### Fluxo - Remoção de NAT
 
 ```mermaid
@@ -137,3 +149,13 @@ graph TD
   v1_11_fortinet_address_delete["v1.11.fortinet.address.delete"] -->|error| v1_nat_delete["v1.nat.delete"]
   v1_12_fortinet_service_delete["v1.12.fortinet.service.delete"] -->|next| v1_nat_delete["v1.nat.delete"]
   v1_12_fortinet_service_delete["v1.12.fortinet.service.delete"] -->|error| v1_nat_delete["v1.nat.delete"]
+```
+
+## Serviços envolvidos
+
+- [v1.1.paloalto.rule.delete](paloalto-rule.md#fluxo---rule-delete)
+- [v1.2.paloalto.rule.edit](paloalto-rule.md#fluxo---rule-edit)
+- [v1.3.paloalto.nat.delete](paloalto-nat.md#fluxo---nat-delete)
+- [v1.4.paloalto.nat.edit](paloalto-nat.md#fluxo---nat-edit)
+- [v1.5.paloalto.service.delete](paloalto-service.md#fluxo---service-delete)
+- [v1.6.paloalto.host.delete](paloalto-host.md#fluxo---host-delete)
