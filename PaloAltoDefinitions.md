@@ -82,6 +82,11 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 }
 ```
 
+### Operações comuns
+- **Excluir**: `DELETE https://<fw>/restapi/v10.2/Objects/Addresses?location=vsys&vsys=vsys1&name=TFDNBM_CV5RGT_ate_HST-189.126.152.92`
+- **Renomear**: `POST https://<fw>/restapi/v10.2/Objects/Addresses:rename?location=vsys&vsys=vsys1&name=TFDNBM...&newname=TFDNBM..._legacy`
+- **Validação rápida**: `GET https://<fw>/restapi/v10.2/Objects/Addresses?name=TFEMP5_CAU7LX_fqdn&location=shared`
+
 ---
 
 ## 🧩 AddressGroups
@@ -130,6 +135,21 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
   }
 }
 ```
+
+### Operações comuns
+- **Remover membro específico (grupo estático)**: envie um `PUT` com a lista atualizada, por exemplo:
+```json
+{
+  "entry": {
+    "@name": "GRP_External_Clients",
+    "static": {
+      "member": ["SHARED_HST-181.41.174.74"]
+    }
+  }
+}
+```
+- **Excluir grupo**: `DELETE https://<fw>/restapi/v10.2/Objects/AddressGroups?location=vsys&vsys=vsys1&name=GRP_External_Clients`
+- **Listar dependências**: `GET /restapi/v10.2/Policies/SecurityRules?location=vsys&vsys=vsys1&name=TDEVOPS_CDEVOPS_ate-200`
 
 ### Cuidados Essenciais
 - Grupos podem referenciar outros grupos; mantenha a mesma hierarquia ao migrar.
@@ -198,6 +218,11 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 }
 ```
 
+### Operações comuns
+- **Excluir**: `DELETE https://<fw>/restapi/v10.2/Objects/Services?location=shared&name=TCP-63000`
+- **Renomear**: `POST https://<fw>/restapi/v10.2/Objects/Services:rename?location=shared&name=UDP-514&newname=UDP-514-legacy`
+- **Checar uso**: `GET /restapi/v10.2/Policies/SecurityRules?location=vsys&vsys=vsys1` (filtrar `service.member`).
+
 ### Boas Práticas
 - Use ranges contínuos sempre que possível para reduzir objetos (ex.: `7000-7020`).
 - Quando precisar diferenciar origem/destino, documente via tags ou descrição (não há campo dedicado no Fortinet).
@@ -237,6 +262,21 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
   }
 }
 ```
+
+### Operações comuns
+- **Remover serviço do grupo** (enviar membros restantes):
+```json
+{
+  "entry": {
+    "@name": "SGRP_TFEOT4_APP",
+    "members": {
+      "member": ["TCP-10801", "TCP-10802"]
+    }
+  }
+}
+```
+- **Excluir**: `DELETE https://<fw>/restapi/v10.2/Objects/ServiceGroups?location=shared&name=SGRP_TFEOT4_APP`
+- **Renomear**: `POST .../ServiceGroups:rename?name=SGRP_TFEOT4_APP&newname=SGRP_TFEOT4_APP_v2`
 
 ### Recomendações
 - Revise dependências: um grupo pode referenciar outro; garanta que os objetos base já existam antes do POST.
@@ -327,6 +367,11 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 - Use prefixos alinhados às tags (`SCH_<TAG>_<contexto>`) para facilitar integrações.
 - Documente o fuso horário adotado (ex.: sempre horário de Brasília) e mantenha consistência.
 - Antes de remover um schedule, valide dependências em policies (`GET /SecurityRules?name=...`).
+
+### Operações comuns
+- **Excluir**: `DELETE https://<fw>/restapi/v10.2/Objects/Schedules?location=vsys&vsys=vsys1&name=SCH_TFCVY2_JAN13`
+- **Editar janela**: `PUT` com novo intervalo em `schedule-type` (substitui listas anteriores).
+- **Renomear**: `POST .../Schedules:rename?name=SCH_TFEOT4_MAINT&newname=SCH_TFEOT4_MAINT_v2`
 
 ---
 
@@ -421,10 +466,11 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 ```
 
 ### Operações comuns
-- **Criação**: enviar objeto completo em `entry`. Use `Move` depois para posicionar (`where=before&dst=Drop-Regions-vsys2`).
-- **Edição**: `PUT` com o mesmo payload, ajustando apenas campos alterados.
-- **Renomear**: útil quando adequando convenções antes da migração.
-- **Mover**: essencial para preservar prioridade; registre o `dst` para rastreabilidade (ex.: `MoveDirection` no micro serviço).
+- **Excluir**: `DELETE https://<fw>/restapi/v10.2/Policies/SecurityRules?location=vsys&vsys=vsys1&name=TDEVOPS_CDEVOPS_ate-200`
+- **Edição**: `PUT` com o payload atualizado (ex.: adicionar/remover `service.member`).
+- **Remover regra em lote**: iterar lista de nomes via micro serviço, usando o mesmo endpoint `DELETE`.
+- **Mover**: `POST https://<fw>/restapi/v10.2/Policies/SecurityRules:move?location=vsys&vsys=vsys1&name=TDEVOPS_CDEVOPS_ate-200&where=before&dst=Drop-Regions-vsys2`
+- **Renomear**: `POST .../SecurityRules:rename?name=TFCVY2_C6HOGA_ate-6&newname=TFCVY2_C6HOGA_ate-6-v2`
 
 ### Boas práticas
 - Garanta que todos os objetos referenciados (addresses, services, schedules) existam antes do POST.
