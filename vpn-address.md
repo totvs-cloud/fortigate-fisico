@@ -29,11 +29,3 @@ graph TD
   v1_11_nsxt_pool_delete["v1.11.nsxt.pool.delete"] -->|next| v1_vpn_address_delete["v1.vpn.address.delete"]
   v1_11_nsxt_pool_delete["v1.11.nsxt.pool.delete"] -->|error| v1_vpn_address_delete["v1.vpn.address.delete"]
 ```
-
-## Serviços envolvidos
-
-- [v1.1.paloalto.rule.delete](paloalto-rule.md#fluxo---rule-delete)
-- [v1.2.paloalto.rule.edit](paloalto-rule.md#fluxo---rule-edit)
-- [v1.3.paloalto.nat.delete](paloalto-nat.md#fluxo---nat-delete)
-- [v1.4.paloalto.nat.edit](paloalto-nat.md#fluxo---nat-edit)
-- [v1.5.paloalto.host.delete](paloalto-host.md#fluxo---host-delete)

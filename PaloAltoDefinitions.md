@@ -1324,3 +1324,128 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 - Ajuste `mtu`/`adjust-tcp-mss` somente quando o loopback participa de túneis com overhead adicional; para usos puramente lógicos mantenha o default.
 - Documente associações (túnel, portal, serviço) no `comment` e na planilha de migração para facilitar troubleshooting futuro.
 
+
+## 🚦 Policy-Based Forwarding Rules
+
+### Endpoints
+| Operação | Método + Caminho | Uso típico |
+| --- | --- | --- |
+| Listar | `GET /Policies/PolicyBasedForwardingRules` | Auditar regras vigentes por VSYS/pre/post |
+| Criar | `POST /Policies/PolicyBasedForwardingRules` | Publicar nova regra de forwarding |
+| Editar | `PUT /Policies/PolicyBasedForwardingRules` | Ajustar match/action existente |
+| Excluir | `DELETE /Policies/PolicyBasedForwardingRules` | Remover regra sem uso |
+| Renomear | `POST /Policies/PolicyBasedForwardingRules:rename` | Adequar convenção de nomes |
+| Reordenar | `POST /Policies/PolicyBasedForwardingRules:move` | Controlar ordem de avaliação |
+
+> Schema completo em [pa.espec.json#L17315-L18180](pa.espec.json#L17315-L18180); os endpoints acima exigem `location`/`vsys` consistentes com o restante das Policies.
+
+### Campos essenciais
+- `entry.@name`: até 63 caracteres; recomendo o padrão `PBF_<contexto>_<ordem>`.
+- `from`: escolha entre blocos `zone.member[]` ou `interface.member[]`; combine apenas um tipo por regra.
+- `source`/`destination`/`service`: aceitam objetos e grupos (`any` por default); `application.member[]` amplia o match.
+- `source-user`: suporta usuários locais, grupos e DAGs; utilize somente quando User-ID estável.
+- `schedule`: referencia `Objects/Schedules` para ativação condicional.
+- `tag.member[]` + `group-tag`: usados para filtros visuais e automação.
+- `negate-source`/`negate-destination`: transforma a lógica em "exceto".
+- `action`: define o comportamento (ver tabela abaixo).
+- `enforce-symmetric-return`: garante retorno pelo mesmo next-hop via `nexthop-address-list.entry[]`.
+- `active-active-device-binding`: em HA A/A force `0`, `1` ou `both` conforme o node responsável.
+- `description` e `disabled=yes` ajudam no lifecycle sem remover a regra.
+
+### Ações suportadas
+| Tipo | Campos obrigatórios | Quando usar |
+| --- | --- | --- |
+| `forward` | `forward.egress-interface`, opcional `nexthop.ip-address`/`fqdn`, `monitor.profile` | Desviar tráfego para interface/next-hop específico (ex.: link MPLS). |
+| `forward-to-vsys` | `forward-to-vsys` | Encaminhar sessão para outro VSYS/shared gateway. |
+| `discard` | nenhum adicional | Drop controlado mantendo contadores de regra. |
+| `no-pbf` | nenhum adicional | Faz match para fins de log/tag mas mantém roteamento padrão. |
+
+### Monitoramento da ação `forward`
+- `monitor.profile`: referência a `Network/TunnelMonitorNetworkProfiles` ou perfil custom; necessário para habilitar monitoramento.
+- `monitor.disable-if-unreachable`: define se a regra é auto-desabilitada quando o monitor falha (`yes` favorece failover para rotas padrão).
+- `monitor.ip-address`: IP real a ser pingado; pode ser diferente do `nexthop`.
+
+### Payloads de referência
+
+#### 1. Forward com failover ativo e monitor
+```json
+{
+  "entry": {
+    "@name": "PBF_TDEVOPS_INTERNET",
+    "from": { "zone": { "member": ["Trust"] } },
+    "source": { "member": ["10.50.10.0/24"] },
+    "destination": { "member": ["any"] },
+    "service": { "member": ["application-default"] },
+    "application": { "member": ["web-browsing", "ssl"] },
+    "tag": { "member": ["TDEVOPS", "internet-breakout"] },
+    "action": {
+      "forward": {
+        "egress-interface": "ethernet1/5",
+        "nexthop": { "ip-address": "200.200.200.2" },
+        "monitor": {
+          "profile": "wait-recover",
+          "disable-if-unreachable": "yes",
+          "ip-address": "8.8.8.8"
+        }
+      }
+    },
+    "enforce-symmetric-return": {
+      "enabled": "yes",
+      "nexthop-address-list": {
+        "entry": [ { "@name": "200.200.200.2" } ]
+      }
+    },
+    "description": "Força breakout SaaS via link secundário"
+  }
+}
+```
+
+#### 2. Encaminhar para VSYS de serviços e fallback no routing padrão
+```json
+{
+  "entry": {
+    "@name": "PBF_TFCVY2_SERVICES",
+    "from": { "zone": { "member": ["Prod"] } },
+    "source": { "member": ["GRP_APP_SERVERS"] },
+    "destination": { "member": ["any"] },
+    "service": { "member": ["SGRP_APP"] },
+    "action": {
+      "forward-to-vsys": "vsys-services"
+    },
+    "schedule": "BUSINESS_HOURS",
+    "negate-destination": "no",
+    "description": "Encaminha tráfego dos apps para inspeção L7",
+    "active-active-device-binding": "both"
+  }
+}
+```
+
+#### 3. Regra de descarte para destinar RFC1918 não autorizada
+```json
+{
+  "entry": {
+    "@name": "PBF_DROP_PRIVATE_EGRESS",
+    "from": { "zone": { "member": ["DMZ"] } },
+    "source": { "member": ["any"] },
+    "destination": { "member": ["RFC1918_SUPerset"] },
+    "service": { "member": ["any"] },
+    "action": { "discard": {} },
+    "description": "Bloqueia endereço privado tentando sair pela DMZ",
+    "disabled": "no"
+  }
+}
+```
+
+### Operações comuns
+- **Mover prioridade**: `POST .../PolicyBasedForwardingRules:move?name=PBF_TDEVOPS_INTERNET&where=before&dst=PBF_DROP_PRIVATE_EGRESS`
+- **Renomear**: `POST .../PolicyBasedForwardingRules:rename?name=PBF_TDEVOPS_INTERNET&newname=PBF_TDEVOPS_INTERNET_v2`
+- **Desabilitar sem remover**: `PUT` setando `disabled=yes` para preservar histórico.
+- **Clonar**: `GET` + `POST` com novo nome e ajustes de fontes/destinos.
+
+### Boas práticas
+- Ordene PBF antes das Security Rules dependerem do efeito (match top-down, sem rulebase separada).
+- Use `monitor.disable-if-unreachable=yes` para que o tráfego volte ao roteamento dinâmico quando o next-hop falhar.
+- Evite `forward-to-vsys` sem rotas de retorno configuradas; combine com `enforce-symmetric-return` quando aplicável.
+- Documente tags e group-tags nas planilhas para rastrear automações (Terraform/Ansible) que filtram por esses valores.
+- Gere relatórios com `GET` + `jq` periodicamente para garantir que regras com `discard` ou `no-pbf` estejam justificadas.
+
