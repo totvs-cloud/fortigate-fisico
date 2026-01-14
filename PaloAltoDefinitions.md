@@ -396,7 +396,22 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 - `service.member`: referências a Services/ServiceGroups já criados (`TCP-10801`, `SGRP_TFEOT4_APP` etc.).
 - `application.member`: frequentemente `any`, mas mantenha explícito.
 - `action`: `allow` ou `deny`.
-- Campos opcionais relevantes: `profile-setting` (ex.: antivírus), `log-setting`, `schedule` (usa objetos de `Schedules`), `tag.member`.
+- Campos opcionais relevantes: `description`, `disabled`, `log-setting`, `log-start`, `log-end`, `profile-setting`, `qos`, `hip-profiles`, `target`, `negate-source/destination`, `schedule` (usa objetos de `Schedules`), `tag.member`.
+
+### Estrutura rápida
+| Campo | Obrigatório? | Notas |
+| --- | --- | --- |
+| `from.member[]` | Sim | Zonas de origem; aceita `any`. |
+| `to.member[]` | Sim | Zonas de destino. |
+| `source.member[]` | Sim | Addresses, AddressGroups, regiões ou `any`. |
+| `destination.member[]` | Sim | Mesmo formato de `source`. |
+| `service.member[]` | Sim | Lista de Services/ServiceGroups. |
+| `application.member[]` | Sim | Normalmente `any`. |
+| `action` | Sim | `allow` / `deny`. |
+| `log-setting` | Não | Use nomes definidos em Device > Log Settings. |
+| `profile-setting` | Não | Referencia perfis (`virus`, `vulnerability`, etc.). |
+| `schedule.member[]` | Não | Vincula a objetos de Schedule. |
+| `description`, `tag.member[]` | Não | Fortemente recomendados para rastreio. |
 
 ### Payloads com base nos fluxos atuais
 
@@ -409,10 +424,16 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
     "to": { "member": ["External_Clients-Interno"] },
     "source": { "member": ["BR"] },
     "destination": { "member": ["SHARED_HST-181.41.174.74"] },
+    "source-user": { "member": ["any"] },
+    "category": { "member": ["any"] },
     "application": { "member": ["any"] },
     "service": { "member": ["TCP-2203", "TCP-2204", "TCP-2202"] },
     "action": "allow",
+    "log-start": "yes",
+    "log-end": "yes",
     "log-setting": "FWD_ELK_syslog_vsys2",
+    "description": "Acesso controlado aos servidores TDEVOPS",
+    "disabled": "no",
     "tag": { "member": ["TDEVOPS_CDEVOPS_ate"] }
   }
 }
@@ -430,13 +451,23 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
     "service": { "member": ["TCP-10801", "TCP-10802", "TCP-10803"] },
     "application": { "member": ["any"] },
     "action": "allow",
+    "negate-source": "no",
+    "negate-destination": "no",
+    "qos": {
+      "marking": {
+        "ip-precedence": {
+          "member": ["af41"]
+        }
+      }
+    },
     "tag": { "member": ["TFEOT4_CKOYPH_ate"] },
     "profile-setting": {
       "profiles": {
         "virus": { "member": ["default"] },
         "vulnerability": { "member": ["ips_base"] }
       }
-    }
+    },
+    "description": "Regras do app TFEOT4 com inspeção completa"
   }
 }
 ```
@@ -459,8 +490,11 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
       ]
     },
     "action": "allow",
+    "log-setting": "FWD_ELK_syslog_vsys2",
+    "hip-profiles": { "member": ["any"] },
     "tag": { "member": ["TFCVY2_C6HOGA_ate"] },
-    "schedule": { "member": ["SCH_TFEOT4_MAINT"] }
+    "schedule": { "member": ["SCH_TFEOT4_MAINT"] },
+    "description": "Regras liberadas apenas na janela SCH_TFEOT4_MAINT"
   }
 }
 ```
@@ -479,32 +513,412 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 
 ---
 
-## 🔀 De-Para Palo Alto ➜ Fortinet
+## 🔁 NAT Rules
 
-| Tipo Palo Alto | Conversão Fortinet | Observações |
+### Endpoints
+| Operação | Método + Caminho | Uso típico | Equivalente Fortinet |
+| --- | --- | --- | --- |
+| Listar | `GET /Policies/NatRules` | Auditar traduções configuradas | - |
+| Criar | `POST /Policies/NatRules` | Publicar SNAT ou DNAT | - |
+| Editar | `PUT /Policies/NatRules` | Ajustar blocos de tradução | - |
+| Excluir | `DELETE /Policies/NatRules` | Limpar regras obsoletas | - |
+| Renomear | `POST /Policies/NatRules:rename` | Organizar convenções de nomes | - |
+| Mover | `POST /Policies/NatRules:move` | Reordenar precedência | - |
+
+> Consulte o schema completo em [pa.espec.json](pa.espec.json#L15840-L16660) e os endpoints expostos em [pa.espec.json](pa.espec.json#L64633-L64950). Para automação dos fluxos (create/edit/delete), veja [nats.md](nats.md).
+
+### Campos essenciais
+- `entry.@name`: sugerimos `NAT_<contexto>_<tipo>` (ex.: `NAT_TDEVOPS_SNAT`).
+- `from` / `to`: zonas de origem/destino usadas no roteamento da sessão.
+- `source` / `destination`: addresses ou groups já inventariados; `any` quando for genérico.
+- `service`: referência única a Service ou ServiceGroup (use `any` quando abranger tudo).
+- `nat-type`: `ipv4` (padrão), `nat64` ou `nptv6`.
+- `to-interface`: interface de saída após o route lookup; mantenha `any` para herdar da rota.
+- `source-translation`: escolha **um** bloco (`dynamic-ip-and-port`, `dynamic-ip` ou `static-ip`).
+- `destination-translation` **ou** `dynamic-destination-translation`: responsáveis por DNAT / load balance.
+- Campos adicionais frequentes: `active-active-device-binding`, `description`, `tag.member`, `group-tag`, `disabled`.
+
+### Blocos de tradução suportados
+| Bloco | Quando usar | Observações |
 | --- | --- | --- |
-| `ip-netmask` | `set subnet <ip> <mask>` | /32 = `255.255.255.255`. |
-| `ip-range` | `set type iprange` + `set start-ip`/`set end-ip` | Validar sobreposição com objetos existentes. |
-| `ip-wildcard` | Multiplicar em várias sub-redes/hosts | Automatizar via script para evitar erros. |
-| `fqdn` | `set type fqdn` + `set fqdn` | Confirmar modo DNS (cache) compatível. |
-| AddressGroup estático | `set member` com objetos equivalentes | Suporta membros que são grupos. |
-| AddressGroup dinâmico | Transformar em lista estática | Necessário extrair tags e gerar script Fortinet. |
-| Schedule | `set schedule <nome>` ou janelas simples | Fortinet não replica non-recurring complexos; crie múltiplas janelas. |
-| Security Rule | `config firewall policy` | Observe diferenças de ordem e campos (profiles/log). |
+| `dynamic-ip-and-port` | Hide NAT tradicional (PAT) | Pode apontar para `interface-address` ou lista em `translated-address`. |
+| `dynamic-ip` | SNAT por pool sem tradução de porta | Aceita `fallback` para interface/address alternativo. |
+| `static-ip` | 1:1 NAT com opção `bi-directional` | Ideal para servidores DMZ publicados em ambos os sentidos. |
+| `destination-translation` | DNAT simples | Suporta `translated-port` e `dns-rewrite`. |
+| `dynamic-destination-translation` | Balanceamento round-robin de VIPs | Escolha `distribution` (`round-robin`, `ip-hash`, etc.). |
 
----
+### Payloads de referência
 
-## ✅ Checklist de Migração
-1. **Inventariar**: `GET` em Addresses, AddressGroups, Services, ServiceGroups, Schedules e SecurityRules; exportar para CSV.
-2. **Classificar**: marcar tipo (host, range, fqdn, dinâmico, tcp, udp, regra) e prioridade.
-3. **Normalizar nomes**: usar `:rename` para padronizar antes de gerar scripts.
-4. **Gerar scripts Fortinet**: converter JSON ➜ CLI (`config firewall address/addrgrp`) e mapear serviços.
-5. **Validar**: reexecutar `GET`, comparar contagem e nomes com inventário Fortinet.
+#### 1. SNAT com PAT na interface
+```json
+{
+  "entry": {
+    "@name": "NAT_TDEVOPS_SNAT",
+    "from": { "member": ["External_Clients-Interno"] },
+    "to": { "member": ["External_Clients-Externo"] },
+    "source": { "member": ["GRP_Internal_Apps"] },
+    "destination": { "member": ["any"] },
+    "service": "any",
+    "nat-type": "ipv4",
+    "to-interface": "ethernet1/1",
+    "source-translation": {
+      "dynamic-ip-and-port": {
+        "interface-address": { "interface": "ethernet1/1" }
+      }
+    },
+    "description": "SNAT das aplicações internas para o link principal",
+    "tag": { "member": ["TDEVOPS_CDEVOPS_ate"] }
+  }
+}
+```
 
-> 🔁 Recomendação: após cada lote migrado, execute políticas de auditoria (`diagnose/firewall/policy list`) para garantir que todos os objetos Fortinet estão associados às políticas esperadas.
+#### 2. DNAT com log e profiles alinhados às regras
+```json
+{
+  "entry": {
+    "@name": "NAT_TFCVY2_DNAT",
+    "from": { "member": ["External_Clients-Externo"] },
+    "to": { "member": ["External_Clients-Interno"] },
+    "source": { "member": ["any"] },
+    "destination": { "member": ["SHARED_HST-181.41.174.74"] },
+    "service": "TCP-63000",
+    "to-interface": "ethernet1/3",
+    "source-translation": {
+      "static-ip": {
+        "static-ip": {
+          "translated-address": "189.126.152.200",
+          "bi-directional": "no"
+        }
+      }
+    },
+    "destination-translation": {
+      "translated-address": "10.50.10.15",
+      "translated-port": 63000
+    },
+    "log-setting": "FWD_ELK_syslog_vsys2",
+    "tag": { "member": ["TFCVY2_C6HOGA_ate"] },
+    "description": "DNAT do host publicado para TCP-63000"
+  }
+}
+```
 
----
+#### 3. VIP dinâmico com pool e distribuição round-robin
+```json
+{
+  "entry": {
+    "@name": "NAT_TFEOT4_VIP",
+    "from": { "member": ["External_Clients-Externo"] },
+    "to": { "member": ["External_Clients-Interno"] },
+    "source": { "member": ["any"] },
+    "destination": { "member": ["GRP_External_Clients"] },
+    "service": "SGRP_TFEOT4_APP",
+    "to-interface": "ethernet1/3",
+    "dynamic-destination-translation": {
+      "translated-address": "GRP_TFEOT4_VIP_POOL",
+      "translated-port": 10801,
+      "distribution": "round-robin"
+    },
+    "tag": { "member": ["TFEOT4_CKOYPH_ate"] },
+    "group-tag": "app-tfeot4",
+    "description": "VIP balanceado para os serviços TCP-1080x"
+  }
+}
+```
 
-## 📌 Próximos Passos
-- Replicar este padrão de documentação para Services/ServiceGroups e demais objetos necessários.
-- Automatizar o de-para com scripts que leem os payloads acima e produzem a CLI Fortinet correspondente.
+### Operações comuns
+- **Excluir**: `DELETE https://<fw>/restapi/v10.2/Policies/NatRules?location=vsys&vsys=vsys1&name=NAT_TDEVOPS_SNAT`
+- **Editar**: `PUT` com o payload completo contendo as alterações de tradução.
+- **Renomear**: `POST .../Policies/NatRules:rename?name=NAT_TFCVY2_DNAT&newname=NAT_TFCVY2_DNAT_v2`
+- **Mover**: `POST .../Policies/NatRules:move?name=NAT_TFEOT4_VIP&where=before&dst=NAT_CleanUp`
+
+### Boas práticas
+- Valide dependências com as Security Rules correspondentes; a ordem relativa das NAT Rules impacta diretamente o match.
+- Sempre crie os objetos referenciados (addresses, service, tags) antes do POST e mantenha a mesma `location`/`vsys`.
+- Documente `nat-type` e `to-interface` nas planilhas de migração para evitar divergência entre ambientes.
+- Utilize os fluxos descritos em [nats.md](nats.md) para manter a sequência service ➜ host ➜ rule ➜ nat ➜ Fortinet consistente.
+
+
+## 🌉 IKE Gateways
+
+### Endpoints
+| Operação | Método + Caminho | Uso típico | Equivalente Fortinet |
+| --- | --- | --- | --- |
+| Listar | `GET /Network/IKEGateways` | Validar status e parâmetros de VPNs | `show vpn ipsec phase1-interface` |
+| Criar | `POST /Network/IKEGateways` | Provisionar gateways (psk/cert) | `config vpn ipsec phase1-interface` |
+| Editar | `PUT /Network/IKEGateways` | Ajustar peer, crypto ou DPD | `set proposal`, `set peerip` |
+| Excluir | `DELETE /Network/IKEGateways` | Remover gateways obsoletos | `delete <phase1>` |
+| Renomear | `POST /Network/IKEGateways:rename` | Alinhar convenções por TAG | `rename <phase1>` |
+
+> Estrutura completa em [pa.espec.json](pa.espec.json#L27100-L27980); fluxos de automação em [ike-gateway.md](ike-gateway.md).
+
+### Campos essenciais
+- `entry.@name`: siga padrão `TAG_contexto-<id>` (ex.: `TEZDNB_CGNRO8_ate-8`).
+- `peer-address`: escolha entre IP fixo, FQDN ou `dynamic` (WAN sem IP estático).
+- `local-address.interface` + `ip`/`floating-ip`: interface usada no IKE (loopback ou física).
+- `authentication`: `pre-shared-key` (com `key`) ou `certificate` (exige `local-certificate` + `certificate-profile`).
+- `protocol.version`: `ikev1`, `ikev2`, `ikev2-preferred`; cada bloco referencia `ike-crypto-profile` e `dpd`.
+- `protocol-common`: habilita NAT-T, `passive-mode` e `fragmentation`.
+- Identificadores: `peer-id`/`local-id` suportam tipos `ipaddr`, `fqdn`, `ufqdn`, `dn` (conforme regex do schema).
+
+### Opções de endereço do peer
+| Tipo | Chave | Quando usar |
+| --- | --- | --- |
+| IP estático | `peer-address.ip` | Parceiros com endereço fixo (mais comum nos fluxos atuais). |
+| FQDN | `peer-address.fqdn` | Parceiros dinâmicos que anunciam hostname. |
+| Dinâmico | `peer-address.dynamic` | Túneis onde o peer inicia de IP variável (ex.: filiais sem IP fixo). |
+
+### Modos de autenticação
+| Tipo | Campos obrigatórios | Observações |
+| --- | --- | --- |
+| Pre-shared key | `authentication.pre-shared-key.key` | Aceita até 255 caracteres; combine com `peer-id` para restringir. |
+| Certificado | `local-certificate.name`, `certificate-profile` | Habilite `hash-and-url` se usar distribuição HTTP; suporte a `strict-validation-revocation`. |
+
+### Payloads de referência
+
+#### 1. Gateway com PSK (derivado do micro serviço)
+```json
+{
+  "entry": {
+    "@name": "TEZDNB_CGNRO8_ate-8",
+    "peer-address": { "ip": "200.49.58.170" },
+    "local-address": { "interface": "loopback.3", "ip": "181.41.161.254/32" },
+    "peer-id": { "type": "ipaddr", "id": "200.49.58.170" },
+    "local-id": { "type": "ipaddr", "id": "181.41.161.254" },
+    "authentication": {
+      "pre-shared-key": { "key": "j,\"8jT~)GJbUt)Wm{g3]" }
+    },
+    "protocol": {
+      "version": "ikev2-preferred",
+      "ikev1": {
+        "exchange-mode": "auto",
+        "ike-crypto-profile": "Totvs_default",
+        "dpd": { "enable": "yes" }
+      },
+      "ikev2": {
+        "ike-crypto-profile": "Totvs_default",
+        "dpd": { "enable": "yes" }
+      }
+    },
+    "protocol-common": {
+      "nat-traversal": { "enable": "no" },
+      "fragmentation": { "enable": "no" }
+    },
+    "comment": "Gateway criado pelo fluxo ike-gateway"
+  }
+}
+```
+
+#### 2. Gateway com certificado e NAT-T
+```json
+{
+  "entry": {
+    "@name": "TFCVY2_cert_vpn",
+    "peer-address": { "fqdn": "vpn.partner.example.com" },
+    "local-address": { "interface": "ethernet1/3" },
+    "authentication": {
+      "certificate": {
+        "local-certificate": {
+          "name": "corp-gw-cert",
+          "hash-and-url": {
+            "enable": "yes",
+            "base-url": "http://certs.internal.example.com/ike"
+          }
+        },
+        "certificate-profile": "corp-profile",
+        "use-management-as-source": "yes",
+        "strict-validation-revocation": "yes"
+      }
+    },
+    "protocol": {
+      "version": "ikev2",
+      "ikev2": {
+        "ike-crypto-profile": "aes256-sha384-dh14",
+        "require-cookie": "no",
+        "dpd": { "enable": "yes", "interval": 10 }
+      }
+    },
+    "protocol-common": {
+      "nat-traversal": { "enable": "yes", "keep-alive-interval": 20 },
+      "passive-mode": "no",
+      "fragmentation": { "enable": "yes" }
+    },
+    "peer-id": { "type": "fqdn", "id": "vpn.partner.example.com" },
+    "local-id": { "type": "fqdn", "id": "vpn.local.example.com" },
+    "tag": { "member": ["TFCVY2_C6HOGA_ate"] }
+  }
+}
+```
+
+### Operações comuns
+- **Excluir**: `DELETE https://<fw>/restapi/v10.2/Network/IKEGateways?location=vsys&vsys=vsys1&name=TEZDNB_CGNRO8_ate-8`
+- **Editar**: `PUT` incluindo o bloco completo alterado (ex.: trocar `ike-crypto-profile`).
+- **Renomear**: `POST .../Network/IKEGateways:rename?name=TFCVY2_cert_vpn&newname=TFCVY2_cert_vpn_v2`
+- **Rotina de criação**: seguir a ordem `service ➜ host ➜ rule ➜ ike-gateway` mostrada em [ike-gateway.md](ike-gateway.md#fluxo---ike-gateway-create).
+
+### Boas práticas
+- Garanta a existência dos `ike-crypto-profile` referenciados (`Network/IkeCryptoProfiles` no schema).
+- Documente `peer-id`/`local-id` com o mesmo valor usado na contraparte Fortinet (campo `set peerid` / `set localid`).
+- Ative `dpd` e `nat-traversal` conforme as características do enlace para evitar quedas falsas.
+- Em certificação, alinhe `certificate-profile` aos parâmetros de CRL/OCSP exigidos pelo SOC.
+- Mantenha senhas PSK fora do Git e injete via pipeline/secret manager, apesar do payload de exemplo mostrar valores reais.
+
+
+## 🔒 IKE Crypto Profiles
+
+### Endpoints
+| Operação | Método + Caminho | Uso típico | Equivalente Fortinet |
+| --- | --- | --- | --- |
+| Listar | `GET /Network/IkeCryptoProfiles` | Auditar propostas fase 1 reutilizadas | `show vpn ipsec phase1-interface` |
+| Criar | `POST /Network/IkeCryptoProfiles` | Padronizar cifragem/integração | `set proposal` (phase1) |
+| Editar | `PUT /Network/IkeCryptoProfiles` | Ajustar algoritmos e lifetime | `set dhgrp`, `set keylife` |
+| Excluir | `DELETE /Network/IkeCryptoProfiles` | Limpar perfis sem uso | `delete <phase1-profile>` |
+
+> Schema completo em [pa.espec.json](pa.espec.json#L27100-L27540).
+
+### Campos essenciais
+- `entry.@name`: até 31 caracteres; sugerir prefixos `IKEP_<contexto>`.
+- `encryption.member[]`: selecione algoritmos compatíveis (`aes-128-cbc`, `aes-256-gcm`, etc.).
+- `hash.member[]`: `sha256` é o padrão atual; evite `md5/non-auth` em projetos novos.
+- `dh-group.member[]`: escolha múltiplos grupos para fallback (ex.: `group14`, `group19`).
+- `lifetime`: declare unidade única (`seconds`, `minutes`, `hours`, `days`).
+- `authentication-multiple`: somente para IKEv2; define quantas vezes o reauth ocorre dentro do lifetime.
+
+### Payloads
+
+#### Perfil padrão AES256/SHA256
+```json
+{
+  "entry": {
+    "@name": "IKEP_TOTVS_default",
+    "encryption": { "member": ["aes-256-cbc", "aes-128-cbc"] },
+    "hash": { "member": ["sha256"] },
+    "dh-group": { "member": ["group14", "group19"] },
+    "lifetime": { "hours": 8 },
+    "authentication-multiple": 0
+  }
+}
+```
+
+#### Perfil com AES-GCM e reautenticação v2
+```json
+{
+  "entry": {
+    "@name": "IKEP_TFCVY2_highsec",
+    "encryption": { "member": ["aes-256-gcm"] },
+    "hash": { "member": ["sha384"] },
+    "dh-group": { "member": ["group19", "group20"] },
+    "lifetime": { "minutes": 90 },
+    "authentication-multiple": 2
+  }
+}
+```
+
+### Boas práticas
+- Reuse nomes entre gateways e perfis para facilitar troubleshooting (`gateway` referencia `ike-crypto-profile`).
+- Agrupe algoritmos em ordem de preferência do mais forte para o mais compatível.
+- Ajuste `authentication-multiple` somente quando o parceiro exigir reauth explícita (IKEv2).
+
+
+## 🛰️ IPSec Tunnels
+
+### Endpoints
+| Operação | Método + Caminho | Uso típico | Equivalente Fortinet |
+| --- | --- | --- | --- |
+| Listar | `GET /Network/IpsecTunnels` | Conferir túneis (phase2) | `show vpn ipsec phase2-interface` |
+| Criar | `POST /Network/IpsecTunnels` | Publicar auto-key ou manual | `config vpn ipsec phase2-interface` |
+| Editar | `PUT /Network/IpsecTunnels` | Ajustar proxy-id, monitor, interface | `set dst-subnet`, `set keepalive` |
+| Excluir | `DELETE /Network/IpsecTunnels` | Limpar túneis desativados | `delete <phase2>` |
+
+> Veja o schema em [pa.espec.json](pa.espec.json#L27980-L28900) e os fluxos em [nats.md](nats.md#serviços-envolvidos) quando o túnel faz parte de migrações automatizadas.
+
+### Campos essenciais (auto-key)
+- `entry.@name`: mantenha coerência com o nome do VPN ID (`VPN_<tag>_<id>`).
+- `tunnel-interface`: interface lógico (`tunnel.X`) já criado em Network Interfaces.
+- `anti-replay`: habilitado por padrão; só desative se o peer não suportar.
+- `tunnel-monitor`: configure `enable`, `destination-ip`, `profile` quando usar HA com failover por monitoramento.
+- Bloco `auto-key`:
+  - `ike-gateway.entry[]`: lista de gateways fase 1 associados (suporta HA ativo/backup).
+  - `ipsec-crypto-profile`: referência a `Network/IpsecCryptoProfiles` (fase2).
+  - `proxy-id.entry[]`: define local/remote/sub-redes e protocolo exigidos pelo peer (IKEv1).
+  - `proxy-id-v6`: versão IPv6 das mesmas entradas.
+
+### Demais modos
+- `manual-key`: usado em ambientes legados; exige `peer-address`, `local-address`, SPI local/remoto e chaves ESP/AH definidas manualmente.
+- `global-protect-satellite`: fluxo específico para satélites; inclui `portal-address`, publicação de rotas e certificados.
+
+### Payloads
+
+#### 1. Túnel auto-key com proxy-id múltiplos
+```json
+{
+  "entry": {
+    "@name": "VPN_TDEVOPS_AUTO",
+    "tunnel-interface": "tunnel.100",
+    "tunnel-monitor": {
+      "enable": "yes",
+      "destination-ip": "10.10.10.1",
+      "tunnel-monitor-profile": "wait-recover"
+    },
+    "auto-key": {
+      "ike-gateway": {
+        "entry": [
+          { "@name": "TEZDNB_CGNRO8_ate-8" },
+          { "@name": "TEZDNB_CGNRO8_ate-8-bkp" }
+        ]
+      },
+      "ipsec-crypto-profile": "IPSECP_TDEVOPS_default",
+      "proxy-id": {
+        "entry": [
+          {
+            "@name": "proxy_TDEVOPS_app",
+            "local": "10.50.10.0/24",
+            "remote": "172.16.0.0/24",
+            "protocol": { "any": {} }
+          },
+          {
+            "@name": "proxy_TDEVOPS_mgmt",
+            "local": "10.60.20.0/24",
+            "remote": "172.16.20.0/24",
+            "protocol": {
+              "tcp": { "local-port": 0, "remote-port": 0 }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+#### 2. Túnel manual-key (legado)
+```json
+{
+  "entry": {
+    "@name": "VPN_LEGACY_MANUAL",
+    "tunnel-interface": "tunnel.50",
+    "manual-key": {
+      "peer-address": { "ip": "198.51.100.30" },
+      "local-address": { "interface": "ethernet1/3", "ip": "189.126.152.254" },
+      "local-spi": "00001000",
+      "remote-spi": "00001001",
+      "esp": {
+        "authentication": { "sha256": { "key": "aaaaaaaa-bbbbbbbb-cccccccc-dddddddd-eeeeeeee-ffffffff-11111111-22222222" } },
+        "encryption": {
+          "algorithm": "aes-128-cbc",
+          "key": "aaaaaaaa-bbbbbbbb-cccccccc-dddddddd"
+        }
+      }
+    }
+  }
+}
+```
+
+### Boas práticas
+- Para IKEv2, prefira `proxy-id` apenas quando o peer exigir; caso contrário utilize selectors automáticos (`any`).
+- Nomeie `tunnel-interface` igual em ambos appliances para simplificar troubleshooting (ex.: `tunnel.100`).
+- Monitore `tunnel-monitor.destination-ip` em um host realmente disponível; evite endereços virtuais que podem cair junto com o túnel.
+- Em clusters, lembre-se de configurar `floating-ip` quando o enlace termina em interface HA ativa/ativa.
+
+
+
+
