@@ -1,6 +1,6 @@
 # 🧭 Gestão de Objetos: Addresses, AddressGroups, Services & ServiceGroups
 
-Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Objetivo: orientar o time de migração Palo Alto ➜ Fortinet no de-para de objetos de endereço e serviço, com exemplos simples e prontos para copiar.
+Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Objetivo: orientar o time de migração focado nos objetos Palo Alto, com exemplos simples e prontos para copiar.
 
 ---
 
@@ -19,13 +19,13 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 ## 🧱 Addresses
 
 ### Endpoints
-| Operação | Método + Caminho | Uso típico | Equivalente Fortinet |
-| --- | --- | --- | --- |
-| Listar | `GET /Objects/Addresses` | Inventariar objetos existentes | `show firewall address` |
-| Criar | `POST /Objects/Addresses` | Inserir host/FQDN/faixa | `config firewall address` |
-| Editar | `PUT /Objects/Addresses` | Ajustar IP, descrição ou tags | `set subnet`, `set type` |
-| Excluir | `DELETE /Objects/Addresses` | Remover objetos órfãos | `delete <address>` |
-| Renomear | `POST /Objects/Addresses:rename` | Padronizar nomes antes da migração | `rename <address>` |
+| Operação | Método + Caminho | Uso típico |
+| --- | --- | --- |
+| Listar | `GET /Objects/Addresses` | Inventariar objetos existentes |
+| Criar | `POST /Objects/Addresses` | Inserir host/FQDN/faixa |
+| Editar | `PUT /Objects/Addresses` | Ajustar IP, descrição ou tags |
+| Excluir | `DELETE /Objects/Addresses` | Remover objetos órfãos |
+| Renomear | `POST /Objects/Addresses:rename` | Padronizar nomes antes da migração |
 
 ### Campos Obrigatórios
 - `entry.@name`: nome único (máx. 63 caracteres, `[0-9a-zA-Z._-]`).
@@ -92,13 +92,13 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 ## 🧩 AddressGroups
 
 ### Endpoints
-| Operação | Método + Caminho | Uso típico | Equivalente Fortinet |
-| --- | --- | --- | --- |
-| Listar | `GET /Objects/AddressGroups` | Mapear grupos usados em políticas | `show firewall addrgrp` |
-| Criar | `POST /Objects/AddressGroups` | Agrupar objetos para regras | `config firewall addrgrp` |
-| Editar | `PUT /Objects/AddressGroups` | Atualizar membros ou filtros | `set member` / `unset` |
-| Excluir | `DELETE /Objects/AddressGroups` | Limpar grupos não usados | `delete <addrgrp>` |
-| Renomear | `POST /Objects/AddressGroups:rename` | Manter convenção de nomes | `rename <addrgrp>` |
+| Operação | Método + Caminho | Uso típico |
+| --- | --- | --- |
+| Listar | `GET /Objects/AddressGroups` | Mapear grupos usados em políticas |
+| Criar | `POST /Objects/AddressGroups` | Agrupar objetos para regras |
+| Editar | `PUT /Objects/AddressGroups` | Atualizar membros ou filtros |
+| Excluir | `DELETE /Objects/AddressGroups` | Limpar grupos não usados |
+| Renomear | `POST /Objects/AddressGroups:rename` | Manter convenção de nomes |
 
 ### Tipos Disponíveis
 1. **Estático** – lista explícita de objetos ou grupos.
@@ -154,20 +154,20 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 ### Cuidados Essenciais
 - Grupos podem referenciar outros grupos; mantenha a mesma hierarquia ao migrar.
 - Descrições e tags ajudam na revisão posterior das regras.
-- Lembrete: filtros dinâmicos consideram **tags dos objetos**. Se não existirem no Fortinet, planeje criação manual.
+- Lembrete: filtros dinâmicos consideram **tags dos objetos**. Garanta que elas existam e estejam atualizadas antes de usar filtros.
 
 ---
 
 ## 🎛 Services
 
 ### Endpoints
-| Operação | Método + Caminho | Uso típico | Equivalente Fortinet |
-| --- | --- | --- | --- |
-| Listar | `GET /Objects/Services` | Inventariar portas customizadas | - |
-| Criar | `POST /Objects/Services` | Registrar TCP/UDP específicos | - |
-| Editar | `PUT /Objects/Services` | Ajustar portas ou timeouts | - |
-| Excluir | `DELETE /Objects/Services` | Remover serviços obsoletos | - |
-| Renomear | `POST /Objects/Services:rename` | Padronizar nomenclatura | - |
+| Operação | Método + Caminho | Uso típico |
+| --- | --- | --- |
+| Listar | `GET /Objects/Services` | Inventariar portas customizadas |
+| Criar | `POST /Objects/Services` | Registrar TCP/UDP específicos |
+| Editar | `PUT /Objects/Services` | Ajustar portas ou timeouts |
+| Excluir | `DELETE /Objects/Services` | Remover serviços obsoletos |
+| Renomear | `POST /Objects/Services:rename` | Padronizar nomenclatura |
 
 > Referências completas em [pa.espec.json](pa.espec.json#L3320-L3780) e endpoints em [pa.espec.json](pa.espec.json#L52820-L53360).
 
@@ -225,7 +225,7 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 
 ### Boas Práticas
 - Use ranges contínuos sempre que possível para reduzir objetos (ex.: `7000-7020`).
-- Quando precisar diferenciar origem/destino, documente via tags ou descrição (não há campo dedicado no Fortinet).
+- Quando precisar diferenciar origem/destino, documente via tags ou descrição (não há campo dedicado no objeto).
 - Defina timeouts customizados apenas quando houver requerimento funcional claro.
 - Para serviços herdados (`location=predefined`), apenas leitura está disponível; crie novos em `shared` ou `vsys` para personalizações.
 
@@ -234,13 +234,13 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 ## 🧬 ServiceGroups
 
 ### Endpoints
-| Operação | Método + Caminho | Uso típico | Equivalente Fortinet |
-| --- | --- | --- | --- |
-| Listar | `GET /Objects/ServiceGroups` | Entender blocos de portas reutilizados | - |
-| Criar | `POST /Objects/ServiceGroups` | Agrupar serviços para regras | - |
-| Editar | `PUT /Objects/ServiceGroups` | Atualizar membros | - |
-| Excluir | `DELETE /Objects/ServiceGroups` | Remover grupos não usados | - |
-| Renomear | `POST /Objects/ServiceGroups:rename` | Manter organização | - |
+| Operação | Método + Caminho | Uso típico |
+| --- | --- | --- |
+| Listar | `GET /Objects/ServiceGroups` | Entender blocos de portas reutilizados |
+| Criar | `POST /Objects/ServiceGroups` | Agrupar serviços para regras |
+| Editar | `PUT /Objects/ServiceGroups` | Atualizar membros |
+| Excluir | `DELETE /Objects/ServiceGroups` | Remover grupos não usados |
+| Renomear | `POST /Objects/ServiceGroups:rename` | Manter organização |
 
 > Definições em [pa.espec.json](pa.espec.json#L3652-L3780) e endpoints em [pa.espec.json](pa.espec.json#L53220-L53590).
 
@@ -378,14 +378,14 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 ## 🛡️ Security Rules
 
 ### Endpoints
-| Operação | Método + Caminho | Uso típico | Equivalente Fortinet |
-| --- | --- | --- | --- |
-| Listar | `GET /Policies/SecurityRules` | Auditar políticas vigentes | - |
-| Criar | `POST /Policies/SecurityRules` | Publicar regras L3/L4 | - |
-| Editar | `PUT /Policies/SecurityRules` | Ajustar campos existentes | - |
-| Excluir | `DELETE /Policies/SecurityRules` | Remover regras obsoletas | - |
-| Renomear | `POST /Policies/SecurityRules:rename` | Padronizar nomes | - |
-| Mover | `POST /Policies/SecurityRules:move` | Reordenar prioridades | - |
+| Operação | Método + Caminho | Uso típico |
+| --- | --- | --- |
+| Listar | `GET /Policies/SecurityRules` | Auditar políticas vigentes |
+| Criar | `POST /Policies/SecurityRules` | Publicar regras L3/L4 |
+| Editar | `PUT /Policies/SecurityRules` | Ajustar campos existentes |
+| Excluir | `DELETE /Policies/SecurityRules` | Remover regras obsoletas |
+| Renomear | `POST /Policies/SecurityRules:rename` | Padronizar nomes |
+| Mover | `POST /Policies/SecurityRules:move` | Reordenar prioridades |
 
 > Referencie o schema completo em [pa.espec.json](pa.espec.json#L14780-L15040) e os endpoints em [pa.espec.json](pa.espec.json#L64160-L64640).
 
@@ -516,14 +516,14 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 ## 🔁 NAT Rules
 
 ### Endpoints
-| Operação | Método + Caminho | Uso típico | Equivalente Fortinet |
-| --- | --- | --- | --- |
-| Listar | `GET /Policies/NatRules` | Auditar traduções configuradas | - |
-| Criar | `POST /Policies/NatRules` | Publicar SNAT ou DNAT | - |
-| Editar | `PUT /Policies/NatRules` | Ajustar blocos de tradução | - |
-| Excluir | `DELETE /Policies/NatRules` | Limpar regras obsoletas | - |
-| Renomear | `POST /Policies/NatRules:rename` | Organizar convenções de nomes | - |
-| Mover | `POST /Policies/NatRules:move` | Reordenar precedência | - |
+| Operação | Método + Caminho | Uso típico |
+| --- | --- | --- |
+| Listar | `GET /Policies/NatRules` | Auditar traduções configuradas |
+| Criar | `POST /Policies/NatRules` | Publicar SNAT ou DNAT |
+| Editar | `PUT /Policies/NatRules` | Ajustar blocos de tradução |
+| Excluir | `DELETE /Policies/NatRules` | Limpar regras obsoletas |
+| Renomear | `POST /Policies/NatRules:rename` | Organizar convenções de nomes |
+| Mover | `POST /Policies/NatRules:move` | Reordenar precedência |
 
 > Consulte o schema completo em [pa.espec.json](pa.espec.json#L15840-L16660) e os endpoints expostos em [pa.espec.json](pa.espec.json#L64633-L64950). Para automação dos fluxos (create/edit/delete), veja [nats.md](nats.md).
 
@@ -635,19 +635,19 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 - Valide dependências com as Security Rules correspondentes; a ordem relativa das NAT Rules impacta diretamente o match.
 - Sempre crie os objetos referenciados (addresses, service, tags) antes do POST e mantenha a mesma `location`/`vsys`.
 - Documente `nat-type` e `to-interface` nas planilhas de migração para evitar divergência entre ambientes.
-- Utilize os fluxos descritos em [nats.md](nats.md) para manter a sequência service ➜ host ➜ rule ➜ nat ➜ Fortinet consistente.
+- Utilize os fluxos descritos em [nats.md](nats.md) para manter a sequência service ➜ host ➜ rule ➜ nat consistente.
 
 
 ## 🌉 IKE Gateways
 
 ### Endpoints
-| Operação | Método + Caminho | Uso típico | Equivalente Fortinet |
-| --- | --- | --- | --- |
-| Listar | `GET /Network/IKEGateways` | Validar status e parâmetros de VPNs | `show vpn ipsec phase1-interface` |
-| Criar | `POST /Network/IKEGateways` | Provisionar gateways (psk/cert) | `config vpn ipsec phase1-interface` |
-| Editar | `PUT /Network/IKEGateways` | Ajustar peer, crypto ou DPD | `set proposal`, `set peerip` |
-| Excluir | `DELETE /Network/IKEGateways` | Remover gateways obsoletos | `delete <phase1>` |
-| Renomear | `POST /Network/IKEGateways:rename` | Alinhar convenções por TAG | `rename <phase1>` |
+| Operação | Método + Caminho | Uso típico |
+| --- | --- | --- |
+| Listar | `GET /Network/IKEGateways` | Validar status e parâmetros de VPNs |
+| Criar | `POST /Network/IKEGateways` | Provisionar gateways (psk/cert) |
+| Editar | `PUT /Network/IKEGateways` | Ajustar peer, crypto ou DPD |
+| Excluir | `DELETE /Network/IKEGateways` | Remover gateways obsoletos |
+| Renomear | `POST /Network/IKEGateways:rename` | Alinhar convenções por TAG |
 
 > Estrutura completa em [pa.espec.json](pa.espec.json#L27100-L27980); fluxos de automação em [ike-gateway.md](ike-gateway.md).
 
@@ -757,7 +757,7 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 
 ### Boas práticas
 - Garanta a existência dos `ike-crypto-profile` referenciados (`Network/IkeCryptoProfiles` no schema).
-- Documente `peer-id`/`local-id` com o mesmo valor usado na contraparte Fortinet (campo `set peerid` / `set localid`).
+- Documente `peer-id`/`local-id` seguindo o padrão acordado com o peer para evitar incompatibilidades.
 - Ative `dpd` e `nat-traversal` conforme as características do enlace para evitar quedas falsas.
 - Em certificação, alinhe `certificate-profile` aos parâmetros de CRL/OCSP exigidos pelo SOC.
 - Mantenha senhas PSK fora do Git e injete via pipeline/secret manager, apesar do payload de exemplo mostrar valores reais.
@@ -766,12 +766,12 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 ## 🔒 IKE Crypto Profiles
 
 ### Endpoints
-| Operação | Método + Caminho | Uso típico | Equivalente Fortinet |
-| --- | --- | --- | --- |
-| Listar | `GET /Network/IkeCryptoProfiles` | Auditar propostas fase 1 reutilizadas | `show vpn ipsec phase1-interface` |
-| Criar | `POST /Network/IkeCryptoProfiles` | Padronizar cifragem/integração | `set proposal` (phase1) |
-| Editar | `PUT /Network/IkeCryptoProfiles` | Ajustar algoritmos e lifetime | `set dhgrp`, `set keylife` |
-| Excluir | `DELETE /Network/IkeCryptoProfiles` | Limpar perfis sem uso | `delete <phase1-profile>` |
+| Operação | Método + Caminho | Uso típico |
+| --- | --- | --- |
+| Listar | `GET /Network/IkeCryptoProfiles` | Auditar propostas fase 1 reutilizadas |
+| Criar | `POST /Network/IkeCryptoProfiles` | Padronizar cifragem/integração |
+| Editar | `PUT /Network/IkeCryptoProfiles` | Ajustar algoritmos e lifetime |
+| Excluir | `DELETE /Network/IkeCryptoProfiles` | Limpar perfis sem uso |
 
 > Schema completo em [pa.espec.json](pa.espec.json#L27100-L27540).
 
@@ -822,12 +822,12 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 ## 🛰️ IPSec Tunnels
 
 ### Endpoints
-| Operação | Método + Caminho | Uso típico | Equivalente Fortinet |
-| --- | --- | --- | --- |
-| Listar | `GET /Network/IpsecTunnels` | Conferir túneis (phase2) | `show vpn ipsec phase2-interface` |
-| Criar | `POST /Network/IpsecTunnels` | Publicar auto-key ou manual | `config vpn ipsec phase2-interface` |
-| Editar | `PUT /Network/IpsecTunnels` | Ajustar proxy-id, monitor, interface | `set dst-subnet`, `set keepalive` |
-| Excluir | `DELETE /Network/IpsecTunnels` | Limpar túneis desativados | `delete <phase2>` |
+| Operação | Método + Caminho | Uso típico |
+| --- | --- | --- |
+| Listar | `GET /Network/IpsecTunnels` | Conferir túneis (phase2) |
+| Criar | `POST /Network/IpsecTunnels` | Publicar auto-key ou manual |
+| Editar | `PUT /Network/IpsecTunnels` | Ajustar proxy-id, monitor, interface |
+| Excluir | `DELETE /Network/IpsecTunnels` | Limpar túneis desativados |
 
 > Veja o schema em [pa.espec.json](pa.espec.json#L27980-L28900) e os fluxos em [nats.md](nats.md#serviços-envolvidos) quando o túnel faz parte de migrações automatizadas.
 
@@ -915,10 +915,412 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 
 ### Boas práticas
 - Para IKEv2, prefira `proxy-id` apenas quando o peer exigir; caso contrário utilize selectors automáticos (`any`).
-- Nomeie `tunnel-interface` igual em ambos appliances para simplificar troubleshooting (ex.: `tunnel.100`).
+- Nomeie `tunnel-interface` com padrão consistente (ex.: `tunnel.100`) para simplificar troubleshooting.
 - Monitore `tunnel-monitor.destination-ip` em um host realmente disponível; evite endereços virtuais que podem cair junto com o túnel.
 - Em clusters, lembre-se de configurar `floating-ip` quando o enlace termina em interface HA ativa/ativa.
 
 
+## 🔐 IPSec Crypto Profiles (Phase 2)
 
+### Endpoints
+| Operação | Método + Caminho | Uso típico |
+| --- | --- | --- |
+| Listar | `GET /Network/IpsecCryptoProfiles` | Auditar proposals usados em túneis fase 2 |
+| Criar | `POST /Network/IpsecCryptoProfiles` | Definir cifra/autenticação aplicadas ao tráfego protegido |
+| Editar | `PUT /Network/IpsecCryptoProfiles` | Ajustar algoritmos, PFS e lifetime |
+| Excluir | `DELETE /Network/IpsecCryptoProfiles` | Remover perfis sem uso |
+
+> Schema detalhado em [pa.espec.json](pa.espec.json#L49300-L49740).
+
+### Modos suportados
+| Tipo | Descrição | Campos obrigatórios |
+| --- | --- | --- |
+| ESP | Usado na maioria dos túneis; exige `encryption` e `authentication` | `esp.encryption.member[]`, `esp.authentication.member[]`, `dh-group`, `lifetime` |
+| AH | Somente autenticação, sem cifragem | `ah.authentication.member[]`, `dh-group`, `lifetime` |
+
+### Campos essenciais
+- `entry.@name`: até 31 caracteres; use prefixos como `IPSECP_<contexto>`.
+- `esp.encryption.member[]`: escolha entre `3des`, `aes-{128,192,256}-cbc`, `aes-128-ccm`, `aes-{128,256}-gcm`, `null`.
+- `esp.authentication.member[]` ou `ah.authentication.member[]`: combina `sha1`, `sha256`, `sha384`, `sha512` etc.
+- `dh-group`: define PFS (`no-pfs`, `group1/2/5/14/15/16/19/20/21`).
+- `lifetime`: escolha **uma** unidade (`seconds`, `minutes`, `hours`, `days`).
+- `lifesize`: limite opcional por volume (`kb`, `mb`, `gb`, `tb`).
+
+### Payloads de referência
+
+#### 1. ESP com AES-GCM e PFS forte
+```json
+{
+  "entry": {
+    "@name": "IPSECP_TDEVOPS_default",
+    "esp": {
+      "encryption": { "member": ["aes-256-gcm", "aes-128-cbc"] },
+      "authentication": { "member": ["sha512", "sha256"] }
+    },
+    "dh-group": "group19",
+    "lifetime": { "hours": 1 },
+    "lifesize": { "gb": 50 }
+  }
+}
+```
+
+#### 2. AH-only para integridade
+```json
+{
+  "entry": {
+    "@name": "IPSECP_AH_integrity",
+    "ah": {
+      "authentication": { "member": ["sha256"] }
+    },
+    "dh-group": "group14",
+    "lifetime": { "minutes": 30 }
+  }
+}
+```
+
+### Operações comuns
+- **Excluir**: `DELETE https://<fw>/restapi/v10.2/Network/IpsecCryptoProfiles?location=vsys&vsys=vsys1&name=IPSECP_TDEVOPS_default`
+- **Editar**: `PUT` reutilizando o payload completo e ajustando apenas algoritmos/lifetime.
+- **Padronizar**: combine `GET` + planilha para garantir mesma lista de perfis entre VSYS.
+
+### Boas práticas
+- Sempre alinhe os algoritmos às capacidades do parceiro antes de publicar o perfil.
+- `aes-256-gcm` com `sha256` cobre requisitos de conformidade modernos, mas valide se o peer aceita GCM.
+- Utilize `lifesize` apenas quando necessário para reduzir renegociações frequentes.
+- Documente onde cada `IpsecCryptoProfile` é referenciado (`Network/IpsecTunnels`) para evitar exclusões acidentais.
+
+
+## 🌐 Tunnel Interfaces
+
+### Endpoints
+| Operação | Método + Caminho | Uso típico |
+| --- | --- | --- |
+| Listar | `GET /Network/Interfaces/Tunnel` | Inventariar interfaces lógicas usadas por túneis |
+| Criar | `POST /Network/Interfaces/Tunnel` | Provisionar interfaces `tunnel.X` |
+| Editar | `PUT /Network/Interfaces/Tunnel` | Ajustar IP, MTU ou atributos IPv6 |
+| Excluir | `DELETE /Network/Interfaces/Tunnel` | Remover interfaces não utilizadas |
+
+> Estrutura em [pa.espec.json](pa.espec.json#L30300-L30780); use [network-tunnel-monitor](pa.espec.json#L30729-L30880) para perfis de monitoramento.
+
+### Campos essenciais
+- `entry.@name`: numérico (`1-9999`) para subinterfaces; em Panorama use descrições coerentes.
+- `df-ignore`: permite fragmentar pacotes mesmo com DF=1 (default `no`).
+- `mtu`: 576-9216 (dependendo do Jumbo Frame global).
+- `ip.entry[]`: permite múltiplos endereços/objetos (IPv4) associados ao tunnel.
+- `ipv6.enabled` + `ipv6.address.entry[]`: habilita pilha dupla no túnel.
+- `interface-management-profile`: associa profiles de gestão (ping, https, etc.).
+- `netflow-profile`: referencia `ServerProfile/Netflow` para exportação de fluxos.
+- `bonjour`, `link-tag`, `comment`: campos opcionais para serviços auxiliares e organização.
+
+### Payloads
+
+#### 1. Tunnel básico com IPv4 e monitoramento
+```json
+{
+  "entry": {
+    "@name": "tunnel.100",
+    "df-ignore": "no",
+    "mtu": 1500,
+    "ip": {
+      "entry": [
+        { "@name": "10.50.10.1/30" },
+        { "@name": "OBJ_TUNNEL100_IP" }
+      ]
+    },
+    "interface-management-profile": "mgmt-tun",
+    "netflow-profile": "NF_default",
+    "comment": "Interface usada pelos VPN_TDEVOPS_AUTO"
+  }
+}
+```
+
+#### 2. Tunnel com IPv6 e serviços Bonjour
+```json
+{
+  "entry": {
+    "@name": "200",
+    "df-ignore": "yes",
+    "mtu": 1400,
+    "ipv6": {
+      "enabled": "yes",
+      "interface-id": "EUI-64",
+      "address": {
+        "entry": [
+          {
+            "@name": "2001:db8:100::1/64",
+            "enable-on-interface": "yes"
+          }
+        ]
+      }
+    },
+    "bonjour": {
+      "enable": "yes",
+      "ttl-check": "yes",
+      "group-id": 10
+    },
+    "link-tag": "vpn-core",
+    "comment": "Subinterface IPv6 para túneis de parceiros"
+  }
+}
+```
+
+### Operações comuns
+- **Excluir**: `DELETE https://<fw>/restapi/v10.2/Network/Interfaces/Tunnel?location=vsys&vsys=vsys1&name=tunnel.100`
+- **Atualizar IP**: `PUT` substituindo `ip.entry` completo para evitar entradas duplicadas.
+- **Provisionar em lote**: gere lista de `tunnel.X` no Panorama e aplique via `POST` com payloads em sequência.
+
+### Boas práticas
+- Reserve faixas de numeração (ex.: `tunnel.100-199` para filiais) para facilitar troubleshooting.
+- Ajuste `mtu` considerando sobrecarga IPSec/Gre; 1400 é valor seguro em cenários com encapsulamento extra.
+- Para IPv6, valide se o peer usa `interface-id` customizado antes de alterar `EUI-64`.
+- Utilize `comment` e `link-tag` para identificar rapidamente a qual VPN cada interface pertence.
+
+
+## 🧭 Virtual Routers
+
+### Endpoints
+| Operação | Método + Caminho | Uso típico |
+| --- | --- | --- |
+| Listar | `GET /Network/VirtualRouters` | Auditar tabelas estáticas e associações de interface |
+| Criar | `POST /Network/VirtualRouters` | Publicar roteadores virtuais por VSYS |
+| Editar | `PUT /Network/VirtualRouters` | Atualizar interfaces, rotas ou perfis de monitoramento |
+| Excluir | `DELETE /Network/VirtualRouters` | Remover VRs descontinuados |
+| Renomear | `POST /Network/VirtualRouters:rename` | Adequar padrão de nomenclatura |
+
+> Schema completo em [pa.espec.json](pa.espec.json#L30740-L31880); o endpoint exposto acima usa `location`/`vsys` iguais ao restante das APIs de Network.
+
+### Campos essenciais
+- `entry.@name`: até 31 caracteres; mantenha o mesmo identificador usado nos diagramas de roteamento.
+- `interface.member[]`: lista de interfaces Layer3/tunnel anexadas ao VR; um membro pode existir em apenas um VR.
+- `routing-table.ip.static-route.entry[]`: tabela de rotas IPv4; cada rota define `destination`, `interface` (ou `nexthop.next-vr`) e `nexthop` (`ip-address`, `fqdn`, `discard`).
+- `routing-table.ipv6.static-route.entry[]`: versão IPv6, com suporte a `nexthop.ipv6-address` e `fqdn`.
+- `admin-dist`/`metric`: controlam preferência entre rotas iguais; respeite faixas do schema (10-240 e 1-65535).
+- `route-table`: escolha entre `unicast`, `multicast`, `both` ou `no-install` para forçar instalação seletiva.
+- `bfd.profile`: vincula perfis de Bidirectional Forwarding Detection (`Network/BfdNetworkProfiles`).
+- `path-monitor`: habilita ping baseado em origem/destino, com `hold-time`, `failure-condition` e múltiplos destinos para failover.
+- `multicast`: configurações PIM/IGMP, interface-groups, permissões ASM/SSM e RP estático.
+
+### Tipos de next-hop suportados
+| Tipo | Bloco | Observações |
+| --- | --- | --- |
+| IP | `nexthop.ip-address` (IPv4) / `ipv6-address` | Cenário padrão; suporta objetos com `x-panMultiple` para resolver nomes de address objects.
+| FQDN | `nexthop.fqdn` | A rota resolve dinamicamente o hostname; útil quando o gateway é publicado por DNS interno.
+| Discard | `nexthop.discard` | Blackhole controlado (null route) para conter tráfego não desejado.
+| Encadeado | `nexthop.next-vr` | Encaminha para outro Virtual Router quando separam-se domínios de roteamento.
+
+### Payloads de referência
+
+#### 1. VR com rotas IPv4, BFD e path-monitor
+```json
+{
+  "entry": {
+    "@name": "VR_TDEVOPS_CORE",
+    "interface": { "member": ["ethernet1/3", "tunnel.100", "loopback.3"] },
+    "routing-table": {
+      "ip": {
+        "static-route": {
+          "entry": [
+            {
+              "@name": "default-internet",
+              "destination": "0.0.0.0/0",
+              "interface": "ethernet1/3",
+              "nexthop": { "ip-address": "200.200.200.1" },
+              "admin-dist": 10,
+              "metric": 10,
+              "bfd": { "profile": "BFD_CORE" },
+              "path-monitor": {
+                "enable": "yes",
+                "failure-condition": "any",
+                "hold-time": 2,
+                "monitor-destinations": {
+                  "entry": [
+                    {
+                      "@name": "default",
+                      "source": "181.41.161.254",
+                      "destination": "8.8.8.8",
+                      "interval": 3,
+                      "count": 5
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "@name": "vpn-devops",
+              "destination": "10.60.20.0/24",
+              "interface": "tunnel.100",
+              "nexthop": { "next-vr": "VR_TUNNELS" },
+              "route-table": { "unicast": {} }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+#### 2. VR dual-stack com multicast e rota IPv6 específica
+```json
+{
+  "entry": {
+    "@name": "VR_TFCVY2_MCAST",
+    "interface": { "member": ["ethernet1/5", "ae1.200", "tunnel.200"] },
+    "routing-table": {
+      "ipv6": {
+        "static-route": {
+          "entry": [
+            {
+              "@name": "default-v6",
+              "destination": "::/0",
+              "interface": "ethernet1/5",
+              "nexthop": { "ipv6-address": "2001:db8:ffff::1" },
+              "metric": 50,
+              "route-table": { "no-install": {} }
+            }
+          ]
+        }
+      }
+    },
+    "multicast": {
+      "enable": "yes",
+      "interface-group": {
+        "entry": [
+          {
+            "@name": "mc-core",
+            "interface": { "member": ["ae1.200", "tunnel.200"] },
+            "igmp": { "enable": "yes", "version": "3", "immediate-leave": "no" },
+            "pim": { "enable": "yes", "hello-interval": 30 }
+          }
+        ]
+      },
+      "rp": {
+        "local-rp": {
+          "static-rp": {
+            "interface": "loopback.10",
+            "address": "192.0.2.10",
+            "group-addresses": {
+              "entry": [
+                { "@name": "ASM_CORP", "group-address": "239.10.0.0/16" }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Operações comuns
+- **Excluir**: `DELETE https://<fw>/restapi/v10.2/Network/VirtualRouters?location=vsys&vsys=vsys1&name=VR_TDEVOPS_CORE`
+- **Editar rota específica**: `PUT` com o bloco `routing-table` completo garantindo que entradas não fiquem duplicadas.
+- **Renomear**: `POST .../Network/VirtualRouters:rename?name=VR_TFCVY2_MCAST&newname=VR_TFCVY2_MCAST_v2`
+- **Mover interfaces entre VRs**: remova a interface do VR antigo antes de adicioná-la ao novo para evitar falhas de validação.
+
+### Boas práticas
+- Versione planilhas de rotas juntamente com os VRs para evitar divergência entre Panorama e firewalls standalone.
+- Utilize `bfd` apenas onde os peers suportam BFD; caso contrário mantenha `None` para reduzir falsos positivos.
+- Configure `path-monitor` apenas em rotas críticas (default ou túneis WAN) e valide se a origem tem IP válido.
+- Separe VRs por domínio de roteamento (prod, parceiros, DMZ) e use `nexthop.next-vr` para interligá-los de forma controlada.
+- Revisite `multicast.interface-group` sempre que adicionar interfaces Layer2/3 para manter PIM/IGMP consistentes.
+
+
+## 🌀 Loopback Interfaces
+
+### Endpoints
+| Operação | Método + Caminho | Uso típico |
+| --- | --- | --- |
+| Listar | `GET /Network/LoopbackInterfaces` | Inventariar loopbacks usados como origem lógica |
+| Criar | `POST /Network/LoopbackInterfaces` | Provisionar `loopback.X` para IKE, GP, serviços |
+| Editar | `PUT /Network/LoopbackInterfaces` | Ajustar IPs, MTU ou perfis associados |
+| Excluir | `DELETE /Network/LoopbackInterfaces` | Remover loopbacks obsoletos |
+
+> Estrutura completa em [pa.espec.json#L29165-L29830](pa.espec.json#L29165-L29830); as operações seguem o mesmo `location`/`vsys` usado para outros objetos Network.
+
+### Campos essenciais
+- `entry.@name`: obrigatório no formato `loopback.<id>` (1-9999); mantenha alinhado ao diagrama/planilha.
+- `df-ignore`: permite fragmentar pacotes mesmo com DF=1; normalmente `no`.
+- `mtu`: 576-9216 dependendo do modo Jumbo Frame.
+- `adjust-tcp-mss`: habilite quando o loopback será origem de sessões encapsuladas (GRE/IPSec) e precisa reduzir MSS.
+- `ip.entry[]`: lista de hosts ou objetos; **não** aceita máscara explícita (o loopback já opera como /32).
+- `ipv6.enabled` + `ipv6.address.entry[]`: habilita pilha dupla; cada entrada pode definir `enable-on-interface`, `prefix` e `anycast`.
+- `interface-management-profile`: controla quais serviços (ping, https, ssh) respondem nesse endereço lógico.
+- `netflow-profile`: exporta fluxos originados do loopback.
+- `comment`: útil para indicar uso (IKE, GP, BGP, etc.).
+
+### Particularidades de endereçamento
+| Item | Detalhe |
+| --- | --- |
+| IPv4 | Informe apenas o host (ex.: `181.41.161.254`) ou um address object; máscaras não são aceitas conforme schema. |
+| IPv6 interface-id | Default `EUI-64`; pode ser sobrescrito por um valor hex de 16 caracteres quando o parceiro exige ID fixo. |
+| IPv6 addresses | Cada `entry` aceita `anycast` e `prefix`; `enable-on-interface=no` mantém o endereço apenas como objeto referenciável. |
+
+### Payloads de referência
+
+#### 1. Loopback IPv4 para origem de túneis
+```json
+{
+  "entry": {
+    "@name": "loopback.3",
+    "df-ignore": "no",
+    "mtu": 1500,
+    "ip": {
+      "entry": [
+        { "@name": "181.41.161.254" },
+        { "@name": "OBJ_LOOPBACK3" }
+      ]
+    },
+    "interface-management-profile": "mgmt-loopbacks",
+    "netflow-profile": "NF_default",
+    "comment": "Origem IKE para TEZDNB gateways"
+  }
+}
+```
+
+#### 2. Loopback dual-stack com MSS adjust
+```json
+{
+  "entry": {
+    "@name": "loopback.200",
+    "df-ignore": "yes",
+    "mtu": 1400,
+    "adjust-tcp-mss": {
+      "enable": "yes",
+      "ipv4-mss-adjustment": 80,
+      "ipv6-mss-adjustment": 100
+    },
+    "ip": {
+      "entry": [
+        { "@name": "203.0.113.200" }
+      ]
+    },
+    "ipv6": {
+      "enabled": "yes",
+      "interface-id": "EUI-64",
+      "address": {
+        "entry": [
+          {
+            "@name": "2001:db8:200::1",
+            "enable-on-interface": "yes"
+          }
+        ]
+      }
+    },
+    "comment": "Loopback dual-stack para portal GP"
+  }
+}
+```
+
+### Operações comuns
+- **Excluir**: `DELETE https://<fw>/restapi/v10.2/Network/LoopbackInterfaces?location=vsys&vsys=vsys1&name=loopback.3`
+- **Atualizar IPs**: `PUT` substituindo todo o bloco `ip.entry` para evitar resíduos de objetos antigos.
+- **Clonar**: combine `GET` + ajuste de payload para replicar padrões entre VSYS (não há endpoint de rename nesse recurso).
+
+### Boas práticas
+- Use loopbacks como origem de IKE/IPSec, BGP e GlobalProtect para manter sessões independentes das interfaces físicas.
+- Publique rotas /32 correspondentes nos Virtual Routers ou dinamicamente (OSPF/BGP) para garantir reachability.
+- Restrinja serviços expostos via `interface-management-profile` e registre o endereço em monitoramentos críticos.
+- Ajuste `mtu`/`adjust-tcp-mss` somente quando o loopback participa de túneis com overhead adicional; para usos puramente lógicos mantenha o default.
+- Documente associações (túnel, portal, serviço) no `comment` e na planilha de migração para facilitar troubleshooting futuro.
 
