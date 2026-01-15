@@ -1449,3 +1449,190 @@ Documento baseado na especificação oficial [pa.espec.json](pa.espec.json). Obj
 - Documente tags e group-tags nas planilhas para rastrear automações (Terraform/Ansible) que filtram por esses valores.
 - Gere relatórios com `GET` + `jq` periodicamente para garantir que regras com `discard` ou `no-pbf` estejam justificadas.
 
+
+## 🛡️ Network Zones
+
+### Endpoints
+| Operação | Método + Caminho | Uso típico |
+| --- | --- | --- |
+| Listar | `GET /Network/Zones` | Inventariar zonas por VSYS e confirmar interfaces members |
+| Criar | `POST /Network/Zones` | Publicar zonas Layer2/3, Tunnel, Tap ou Virtual Wire |
+| Editar | `PUT /Network/Zones` | Ajustar membros, perfis ou flags (User-ID, Device-ID) |
+| Excluir | `DELETE /Network/Zones` | Remover zonas obsoletas (sem interfaces associadas) |
+
+> Lembre de informar `location=vsys` e `vsys=<nome>`; zonas não possuem endpoints de `:rename` ou `:move`, portanto renomeios exigem recriação.
+
+### Campos essenciais
+- `entry.@name`: até 31 caracteres; padronize `ZN_<domínio>_<contexto>` para casar com regras de segurança/NAT.
+- `network`: define o tipo da zona (`layer3`, `layer2`, `tap`, `virtual-wire`, `tunnel`, `external`). Cada bloco aceita `member[]` com as interfaces permitidas.
+- `zone-protection-profile`: referencia `Network/ZoneProtectionNetworkProfiles` para inspeções de flood/scan por zona.
+- `log-setting`: aponta para um Log Forwarding Profile para eventos Intrazone/Interzone e logs de sistemas associados à zona.
+- `enable-user-identification`: ativa User-ID; combine com `user-acl.include-list` e `exclude-list` quando for necessário limitar quais sub-redes participam.
+- `device-identification`: habilita Device-ID para inventário e políticas baseadas em dispositivo.
+- `include-list` / `exclude-list`: definem ranges/fqdn que podem (ou não) produzir mapeamentos User-ID/Device-ID.
+- `description`, `tag.member[]` e `group-tag`: facilitam automações e revisões de compliance.
+- `zone-profile-setting`: opcionalmente referencia perfis de inspeção avançada (Packet Buffer Protection, Content-ID) quando habilitados.
+
+### Tipos de zona suportados
+| Tipo | Bloco | Interfaces aceitas | Observações |
+| --- | --- | --- | --- |
+| Layer3 | `network.layer3.member[]` | Ethernet L3, subinterfaces, loopbacks | Mais comum; suporta User-ID, Device-ID, Zone Protection e logging completo. |
+| Layer2 | `network.layer2.member[]` | Interfaces L2/AE subinterfaces | Usado em domínios switching; não participa de roteamento direto. |
+| Virtual Wire | `network.virtual-wire.member[]` | Interfaces em pares vwire | Ideal para inspeção transparente; não suporta User-ID. |
+| Tap | `network.tap.member[]` | Interfaces TAP | Apenas monitoramento; tráfego não é transmitido. |
+| Tunnel | `network.tunnel.member[]` | `tunnel.X` | Necessário para VPNs e SD-WAN; combine com zonas específicas para selecionar regras. |
+| External | `network.external.member[]` | `l3` ou `loopback` expostos | Usado por GlobalProtect e integrações GP Portal/Gateway. |
+
+### Recursos de segurança/adicionais
+- `intrazone-default` / `interzone-default`: herdam logging e perfis com base nas zonas Trust/Untrust; mantenha coerência entre zona e regras padrões.
+- `zone-protection-profile` + `log-setting`: atacam vetores volumétricos e exportam logs; sempre associe quando a zona recebe tráfego público.
+- `packet-buffer-protection`: habilitado via `zone-profile-setting` para evitar exploitation por buffer exhaustion.
+- `user-acl.include-list`/`exclude-list`: controlam quais sub-redes podem publicar mapeamentos User-ID; útil quando a zona contém redes de terceiros.
+- `device-identification`: exige conteúdo dos perfis Device-ID; use somente quando a licença estiver ativa para evitar alertas ruidosos.
+
+### Payloads de referência
+
+#### 1. Zona Layer3 com User-ID e Zone Protection
+```json
+{
+  "entry": {
+    "@name": "ZN_TDEVOPS_TRUST",
+    "network": {
+      "layer3": { "member": ["ethernet1/3", "ethernet1/4.10", "loopback.3"] }
+    },
+    "zone-protection-profile": "ZP_TRUST_IN",
+    "log-setting": "LOG_TDEVOPS",
+    "enable-user-identification": "yes",
+    "device-identification": "yes",
+    "user-acl": {
+      "include-list": { "member": ["10.50.10.0/24", "10.60.20.0/24"] },
+      "exclude-list": { "member": ["10.50.10.200"] }
+    },
+    "tag": { "member": ["TDEVOPS", "trust"] },
+    "description": "Zona interna das aplicações TOTVS"
+  }
+}
+```
+
+#### 2. Zona Tunnel dedicada às VPNs B2B
+```json
+{
+  "entry": {
+    "@name": "ZN_VPN_B2B",
+    "network": {
+      "tunnel": { "member": ["tunnel.100", "tunnel.101"] }
+    },
+    "zone-protection-profile": "ZP_VPN",
+    "log-setting": "LOG_VPN",
+    "enable-user-identification": "no",
+    "device-identification": "no",
+    "tag": { "member": ["vpn", "b2b"] },
+    "description": "Tráfego proveniente dos IPsec tunnels parceiros"
+  }
+}
+```
+
+### Operações comuns
+- **Criar zona Layer3**: `POST /Network/Zones?location=vsys&vsys=vsys1` com payload similar ao exemplo Trust.
+- **Atualizar membros**: `PUT` substituindo todo o bloco `network.<tipo>.member[]` (o API não oferece adição incremental).
+- **Associar Zone Protection**: `PUT` informando `zone-protection-profile` já existente em `Network/ZoneProtectionNetworkProfiles`.
+- **Auditar uso**: `GET /Network/Zones?location=vsys&vsys=vsys1 | jq '.response.result.entry[] | {name: .["@name"], type: (.network | keys[])}'`.
+
+### Boas práticas
+- Nomeie zonas alinhadas aos domínios de segurança (Trust, DMZ, VPN, Mgmt) e sincronize com planilhas de migração.
+- Nunca deixe interfaces órfãs: mova-as para `null zone` (`none`) antes de excluir a zona para evitar falhas no `DELETE`.
+- Sempre aplique um Zone Protection Profile em zonas expostas à Internet; combine com log forwarding para facilitar incident response.
+- Ative User-ID apenas quando realmente necessário e restrinja sub-redes com `include-list`/`exclude-list` para mitigar spoofing.
+- Revise zonas Tunnel e External após alterações em VPNs/GP para garantir que novas interfaces lógicas estejam cobertas pelas políticas corretas.
+
+## 🧩 Device/Virtual Systems
+
+### Endpoints
+| Operação | Método + Caminho | Uso típico |
+| --- | --- | --- |
+| Listar | `GET /Device/VirtualSystems?location=device` | Inventariar VSYS, interfaces e objetos importados |
+| Criar | `POST /Device/VirtualSystems?location=device` | Publicar um novo VSYS para um tenant ou domínio lógico |
+| Editar | `PUT /Device/VirtualSystems?location=device` | Ajustar descrições, imports e perfis de segurança |
+| Excluir | `DELETE /Device/VirtualSystems?location=device` | Remover VSYS que não possuem interfaces/objetos associados |
+
+> Para editar um VSYS existente informe `@name` no payload; `vsys1` é criado automaticamente e não pode ser excluído. Multi-VSYS exige licença ativa.
+
+### Campos essenciais
+- `entry.@name`: identificador técnico (`vsys1`, `vsys2`, `vsys-tenantA`). Evite espaços e mantenha até 31 caracteres.
+- `display-name`: rótulo amigável exibido no GUI; pode repetir entre appliances, mas mantenha padrão `VSYS_<cliente>`.
+- `description`: contexto de uso, responsável e janela de manutenção.
+- `import.interface.member[]`: interfaces L2/L3, loopbacks, túneis ou subinterfaces que pertencem ao VSYS.
+- `import.virtual-router.member[]`: associa um ou mais Virtual Routers (documentados em `/Networks/VirtualRouter`).
+- `import.zone.member[]`: lista as zonas que ficam visíveis dentro do VSYS (só funciona para zonas criadas com `location=vsys`).
+- `import.vlan.member[]`, `import.virtual-wire.member[]`, `import.qos.member[]`, `import.sdwan.member[]`: traz objetos avançados compartilhados pelo dispositivo.
+- `import.profile-setting.profiles.<tipo>.member[]`: vincula perfis de segurança compartilhados (AV, AntiSpyware, Vulnerability, URL Filtering, File Blocking, WildFire, DoS, etc.).
+- `application-override` / `universal-category-usage`: flags específicos para compatibilidade com App-ID legado; use somente se indicado no inventário.
+
+### Importações comuns
+| Recurso | Nó de importação | Observações |
+| --- | --- | --- |
+| Interfaces físicas/lógicas | `import.interface.member[]` | Cada interface só pode pertencer a um VSYS por vez. Remova do VSYS anterior antes de migrar. |
+| Virtual Routers | `import.virtual-router.member[]` | Necessário para que o VSYS enxergue rotas e BGP/OSPF associados. |
+| Zonas | `import.zone.member[]` | Torna disponível o conjunto de zonas criado para o tenant, permitindo referenciá-las em políticas. |
+| VLANs | `import.vlan.member[]` | Útil para ambientes L2 com SVI internos. |
+| Virtual Wires | `import.virtual-wire.member[]` | Necessário para firewalls transparentes multi-tenant. |
+| QoS Profiles | `import.qos.member[]` | Habilita políticas QoS por VSYS. |
+| SD-WAN Profiles | `import.sdwan.member[]` | Disponibiliza roteamento SD-WAN ou templates de virtual path específicos. |
+| Perfis de segurança | `import.profile-setting.profiles.<tipo>.member[]` | Permite reutilizar perfis já padronizados no Device Template. |
+
+### Payloads de referência
+
+#### 1. Criação de VSYS corporativo completo
+```json
+{
+  "entry": {
+    "@name": "vsys2",
+    "display-name": "VSYS_TDEVOPS",
+    "description": "Tenant TOTVS DevOps",
+    "import": {
+      "interface": { "member": ["ethernet1/5", "ethernet1/6.10", "tunnel.120"] },
+      "virtual-router": { "member": ["VR_TDEVOPS"] },
+      "zone": { "member": ["ZN_TDEVOPS_TRUST", "ZN_TDEVOPS_DMZ"] },
+      "qos": { "member": ["QOS_TDEVOPS"] },
+      "sdwan": { "member": ["SDWAN_TDEVOPS"] },
+      "profile-setting": {
+        "profiles": {
+          "virus": { "member": ["AV_DEFAULT"] },
+          "spyware": { "member": ["AS_DEFAULT"] },
+          "vulnerability": { "member": ["VULN_CORP"] },
+          "url-filtering": { "member": ["URL_CORP"] },
+          "wildfire-analysis": { "member": ["WF_GLOBAL"] }
+        }
+      }
+    }
+  }
+}
+```
+
+#### 2. Atualização para importar nova interface e zona
+```json
+{
+  "entry": {
+    "@name": "vsys2",
+    "import": {
+      "interface": { "member": ["ethernet1/5", "ethernet1/6.10", "ethernet1/7.200", "tunnel.120"] },
+      "zone": { "member": ["ZN_TDEVOPS_TRUST", "ZN_TDEVOPS_DMZ", "ZN_TDEVOPS_VPN"] }
+    }
+  }
+}
+```
+
+### Operações comuns
+- **Inventário rápido**: `GET /Device/VirtualSystems?location=device | jq '.response.result.entry[] | {name: ."@name", interfaces: (.import.interface.member // [])}'`.
+- **Criar VSYS**: `POST` com payload completo garantindo que VR, zonas e perfis existam previamente.
+- **Atualizar imports**: `PUT` substitui o array informado; inclua todos os `member[]` desejados para evitar remoção acidental.
+- **Remover VSYS**: `DELETE` aceito apenas quando não há interfaces ou objetos vinculados; desassocie-os primeiro.
+
+### Boas práticas
+- Defina convenções `vsys<id>` + `display-name` legível para facilitar mapeamentos com CMDB/tenants.
+- Automatize validações para garantir que toda interface, VR e zona referenciada exista antes do `POST/PUT`.
+- Não reutilize `vsys1` para novos tenants; mantenha-o para serviços compartilhados ou legado, simplificando troubleshooting.
+- Documente quem é o owner de cada VSYS e quais objetos são compartilhados (`import.*`) para evitar exclusões involuntárias.
+- Em ambientes Panorama, mantenha a mesma estrutura de VSYS entre templates para reduzir drift na hora do push.
+
+
